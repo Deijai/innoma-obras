@@ -230,7 +230,7 @@ export class AuthService {
                 email: data.email,
                 telefone: data.telefone,
                 perfil: 'operador',
-                avatar_url: null,
+                avatar_url: undefined,
                 empresa: data.empresa,
                 created_at: new Date().toISOString(),
                 updated_at: new Date().toISOString(),

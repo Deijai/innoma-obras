@@ -1,10 +1,12 @@
-import { initializeApp, FirebaseOptions } from 'firebase/app';
-import { getAuth, initializeAuth, getReactNativePersistence } from 'firebase/auth';
-import { getFirestore, connectFirestoreEmulator } from 'firebase/firestore';
-import { getStorage } from 'firebase/storage';
-import { getFunctions, connectFunctionsEmulator } from 'firebase/functions';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import Constants from 'expo-constants';
+import { FirebaseOptions, initializeApp } from 'firebase/app';
+import {
+  // @ts-ignore 
+  getReactNativePersistence, initializeAuth
+} from 'firebase/auth';
+import { connectFirestoreEmulator, getFirestore } from 'firebase/firestore';
+import { connectFunctionsEmulator, getFunctions } from 'firebase/functions';
+import { getStorage } from 'firebase/storage';
 
 // Configuração do Firebase
 // const firebaseConfig: FirebaseOptions = {
@@ -16,7 +18,7 @@ import Constants from 'expo-constants';
 //   appId: Constants.expoConfig?.extra?.firebaseAppId || "1:123456789:android:abcdef",
 // };
 
-const firebaseConfig:  = {
+const firebaseConfig: FirebaseOptions = {
   apiKey: "AIzaSyALwjePUW2GdfHhj8lRjpGsfGqsFiEgT_4",
   authDomain: "innoma-obras.firebaseapp.com",
   projectId: "innoma-obras",
@@ -50,29 +52,29 @@ const functions = getFunctions(app);
 if (isDevelopment) {
   try {
     // Emulador do Auth (não precisa de configuração adicional)
-    
+
     // Emulador do Firestore
     if (!firestore._delegate._terminated) {
       connectFirestoreEmulator(firestore, 'localhost', 8080);
     }
-    
+
     // Emulador das Functions
     connectFunctionsEmulator(functions, 'localhost', 5001);
-    
+
     console.log('🔧 Firebase emulators conectados');
   } catch (error) {
     console.warn('⚠️ Erro ao conectar emuladores:', error);
   }
 }
 
-export { auth, firestore, storage, functions };
+export { auth, firestore, functions, storage };
 export default app;
 
 // Utilitários para configuração
 export const FirebaseConfig = {
   isDevelopment,
   projectId: firebaseConfig.projectId,
-  
+
   // Collections do Firestore
   collections: {
     users: 'users',
@@ -84,7 +86,7 @@ export const FirebaseConfig = {
     documentos: 'documentos',
     sync: 'sync_logs',
   },
-  
+
   // Storage paths
   storage: {
     avatars: 'avatars',

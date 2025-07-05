@@ -13,16 +13,17 @@ import { ThemeProvider } from '@/contexts/ThemeContext';
 
 // Services
 import { initializeDatabase } from '@/services/database/sqlite';
-import { initializeNotifications } from '@/services/notifications';
+//import { initializeNotifications } from '@/services/notifications';
 
 // Prevent the splash screen from auto-hiding
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
     const [fontsLoaded] = useFonts({
-        'Inter-Regular': require('@/assets/fonts/Inter-Regular.ttf'),
-        'Inter-Medium': require('@/assets/fonts/Inter-Medium.ttf'),
-        'Inter-Bold': require('@/assets/fonts/Inter-Bold.ttf'),
+        // 'Inter-Regular': require('@/assets/fonts/Inter-Regular.ttf'),
+        // 'Inter-Medium': require('@/assets/fonts/Inter-Medium.ttf'),
+        // 'Inter-Bold': require('@/assets/fonts/Inter-Bold.ttf'),
+        'Space-Mono': require('@/assets/fonts/SpaceMono-Regular.ttf'),
     });
 
     useEffect(() => {
@@ -41,7 +42,7 @@ export default function RootLayout() {
             await initializeDatabase();
 
             // Inicializar notificações
-            await initializeNotifications();
+            //await initializeNotifications();
 
             console.log('App inicializado com sucesso');
         } catch (error) {

@@ -16,7 +16,7 @@ interface CardProps extends TouchableOpacityProps {
     children: React.ReactNode;
     variant?: CardVariant;
     padding?: CardPadding;
-    gradient?: string[];
+    gradient?: readonly [string, string, ...string[]]; // Tipagem correta para LinearGradient
     style?: ViewStyle;
     containerStyle?: ViewStyle;
 }
@@ -33,62 +33,54 @@ export function Card({
 }: CardProps) {
     const { theme } = useTheme();
 
-    const getPaddingStyle = () => {
+    const getPaddingStyle = (): ViewStyle => {
         switch (padding) {
             case 'none':
                 return {};
             case 'small':
-                return { padding: theme.spacing.sm };
+                return { padding: theme.spacing?.sm || 8 };
             case 'medium':
-                return { padding: theme.spacing.md };
+                return { padding: theme.spacing?.md || 16 };
             case 'large':
-                return { padding: theme.spacing.lg };
+                return { padding: theme.spacing?.lg || 24 };
             default:
-                return { padding: theme.spacing.md };
+                return { padding: theme.spacing?.md || 16 };
         }
     };
 
-    const getCardStyle = () => {
-        const baseStyle = [
-            styles.card,
-            {
-                backgroundColor: theme.colors.cardBackground,
-                borderRadius: theme.borderRadius.base,
-            },
-            getPaddingStyle(),
-        ];
+    const getCardStyle = (): ViewStyle => {
+        const baseStyle: ViewStyle = {
+            backgroundColor: theme.colors.cardBackground,
+            borderRadius: theme.borderRadius?.base || 8,
+            overflow: 'hidden',
+            ...getPaddingStyle(),
+        };
 
         switch (variant) {
             case 'elevated':
-                return [
+                return {
                     ...baseStyle,
-                    theme.shadows.medium,
-                ];
+                    ...theme.shadows.medium,
+                };
 
             case 'outlined':
-                return [
+                return {
                     ...baseStyle,
-                    {
-                        borderWidth: 1,
-                        borderColor: theme.colors.cardBorder,
-                    },
-                ];
+                    borderWidth: 1,
+                    borderColor: theme.colors.cardBorder,
+                };
 
             case 'filled':
-                return [
+                return {
                     ...baseStyle,
-                    {
-                        backgroundColor: theme.colors.surfaceVariant,
-                    },
-                ];
+                    backgroundColor: theme.colors.surfaceVariant,
+                };
 
             case 'gradient':
-                return [
+                return {
                     ...baseStyle,
-                    {
-                        backgroundColor: 'transparent',
-                    },
-                ];
+                    backgroundColor: 'transparent',
+                };
 
             default:
                 return baseStyle;
@@ -96,14 +88,15 @@ export function Card({
     };
 
     const CardContent = () => (
-        <View style={[getCardStyle(), style]}>
+        <View style={StyleSheet.flatten([getCardStyle(), style])}>
             {children}
         </View>
     );
 
-    if (variant === 'gradient' && gradient) {
+    if (variant === 'gradient' && gradient && gradient.length >= 2) {
+        const gradientColors = gradient.length >= 2 ? gradient : [gradient[0] || '#000', gradient[1] || '#000'] as const;
         return (
-            <View style={[styles.container, containerStyle]}>
+            <View style={StyleSheet.flatten([styles.container, containerStyle])}>
                 {onPress ? (
                     <TouchableOpacity
                         {...props}
@@ -112,20 +105,20 @@ export function Card({
                         style={styles.touchable}
                     >
                         <LinearGradient
-                            colors={gradient}
+                            colors={gradientColors}
                             start={{ x: 0, y: 0 }}
                             end={{ x: 1, y: 1 }}
-                            style={[getCardStyle(), style]}
+                            style={StyleSheet.flatten([getCardStyle(), style])}
                         >
                             {children}
                         </LinearGradient>
                     </TouchableOpacity>
                 ) : (
                     <LinearGradient
-                        colors={gradient}
+                        colors={gradientColors}
                         start={{ x: 0, y: 0 }}
                         end={{ x: 1, y: 1 }}
-                        style={[getCardStyle(), style]}
+                        style={StyleSheet.flatten([getCardStyle(), style])}
                     >
                         {children}
                     </LinearGradient>
@@ -136,7 +129,7 @@ export function Card({
 
     if (onPress) {
         return (
-            <View style={[styles.container, containerStyle]}>
+            <View style={StyleSheet.flatten([styles.container, containerStyle])}>
                 <TouchableOpacity
                     {...props}
                     onPress={onPress}
@@ -150,7 +143,7 @@ export function Card({
     }
 
     return (
-        <View style={[styles.container, containerStyle]}>
+        <View style={StyleSheet.flatten([styles.container, containerStyle])}>
             <CardContent />
         </View>
     );
@@ -158,17 +151,17 @@ export function Card({
 
 // Componentes auxiliares para estruturar o conteúdo do Card
 export function CardHeader({ children, style }: { children: React.ReactNode; style?: ViewStyle }) {
-    return <View style={[styles.header, style]}>{children}</View>;
+    return <View style={StyleSheet.flatten([styles.header, style])}>{children}</View>;
 }
 
 export function CardBody({ children, style }: { children: React.ReactNode; style?: ViewStyle }) {
-    return <View style={[styles.body, style]}>{children}</View>;
+    return <View style={StyleSheet.flatten([styles.body, style])}>{children}</View>;
 }
 
 export function CardFooter({ children, style }: { children: React.ReactNode; style?: ViewStyle }) {
     const { theme } = useTheme();
     return (
-        <View style={[styles.footer, { borderTopColor: theme.colors.border }, style]}>
+        <View style={StyleSheet.flatten([styles.footer, { borderTopColor: theme.colors.border }, style])}>
             {children}
         </View>
     );
@@ -177,9 +170,6 @@ export function CardFooter({ children, style }: { children: React.ReactNode; sty
 const styles = StyleSheet.create({
     container: {
         marginBottom: 16,
-    },
-    card: {
-        overflow: 'hidden',
     },
     touchable: {
         borderRadius: 8,

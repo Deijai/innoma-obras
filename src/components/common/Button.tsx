@@ -43,7 +43,7 @@ export function Button({
     const getButtonStyle = () => {
         const baseStyle = [
             styles.button,
-            theme.sizes.button[size],
+            theme.sizes?.button?.[size] || theme.sizes.button[size],
             fullWidth && styles.fullWidth,
         ];
 
@@ -102,8 +102,8 @@ export function Button({
         const baseTextStyle = [
             styles.text,
             {
-                fontFamily: theme.typography.fontFamily.medium,
-                fontSize: size === 'small' ? theme.typography.fontSize.sm : theme.typography.fontSize.base,
+                fontFamily: theme.typography?.fontFamily?.medium || 'Inter-Medium',
+                fontSize: size === 'small' ? theme.typography?.fontSize?.sm || 14 : theme.typography?.fontSize?.base || 16,
             },
         ];
 
@@ -169,10 +169,10 @@ export function Button({
                 activeOpacity={0.8}
             >
                 <LinearGradient
-                    colors={[theme.colors.primary, theme.colors.primaryDark]}
+                    colors={[theme.colors.primary, theme.colors.primaryDark] as const}
                     start={{ x: 0, y: 0 }}
                     end={{ x: 1, y: 1 }}
-                    style={[StyleSheet.absoluteFill, { borderRadius: theme.borderRadius.base }]}
+                    style={[StyleSheet.absoluteFill, { borderRadius: theme.borderRadius?.base || 8 }]}
                 />
                 {renderContent()}
             </TouchableOpacity>

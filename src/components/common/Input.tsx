@@ -83,7 +83,7 @@ export const Input = forwardRef<TextInput, InputProps>(({
 
     const getInputContainerStyle = () => [
         styles.inputContainer,
-        theme.sizes.input[size],
+        theme.sizes?.input?.[size] || { height: 44 },
         {
             borderColor: error
                 ? theme.colors.inputError
@@ -101,9 +101,9 @@ export const Input = forwardRef<TextInput, InputProps>(({
         {
             color: theme.colors.text,
             fontSize: size === 'small'
-                ? theme.typography.fontSize.sm
-                : theme.typography.fontSize.base,
-            fontFamily: theme.typography.fontFamily.regular,
+                ? theme.typography?.fontSize?.sm || 14
+                : theme.typography?.fontSize?.base || 16,
+            fontFamily: theme.typography?.fontFamily?.regular || 'Inter-Regular',
         },
         leftIcon && styles.inputWithLeftIcon,
         (rightIcon || isPassword) && styles.inputWithRightIcon,
@@ -121,8 +121,8 @@ export const Input = forwardRef<TextInput, InputProps>(({
         fontSize: labelAnimation.interpolate({
             inputRange: [0, 1],
             outputRange: [
-                size === 'small' ? theme.typography.fontSize.sm : theme.typography.fontSize.base,
-                theme.typography.fontSize.xs
+                size === 'small' ? theme.typography?.fontSize?.sm || 14 : theme.typography?.fontSize?.base || 16,
+                theme.typography?.fontSize?.xs || 12
             ],
         }),
         top: labelAnimation.interpolate({
@@ -134,7 +134,7 @@ export const Input = forwardRef<TextInput, InputProps>(({
         }),
         backgroundColor: theme.colors.inputBackground,
         paddingHorizontal: 4,
-        fontFamily: theme.typography.fontFamily.regular,
+        fontFamily: theme.typography?.fontFamily?.regular || 'Inter-Regular',
     });
 
     const getIconColor = () => {

@@ -44,152 +44,6 @@ const baseColors = {
     overlay: 'rgba(0, 0, 0, 0.3)',
 };
 
-// Tema claro
-const lightTheme = {
-    colors: {
-        ...baseColors,
-
-        // Superfícies
-        background: baseColors.white,
-        surface: baseColors.white,
-        surfaceVariant: baseColors.gray50,
-        surfaceDisabled: baseColors.gray100,
-
-        // Textos
-        text: baseColors.gray900,
-        textSecondary: baseColors.gray600,
-        textTertiary: baseColors.gray400,
-        textDisabled: baseColors.gray300,
-        textInverse: baseColors.white,
-
-        // Bordas
-        border: baseColors.gray200,
-        borderLight: baseColors.gray100,
-        borderDark: baseColors.gray300,
-
-        // Inputs
-        inputBackground: baseColors.white,
-        inputBorder: baseColors.gray300,
-        inputFocused: baseColors.primary,
-        inputError: baseColors.error,
-
-        // Cards
-        cardBackground: baseColors.white,
-        cardBorder: baseColors.gray200,
-        cardShadow: baseColors.gray900,
-
-        // Navigation
-        navigationBackground: baseColors.white,
-        navigationBorder: baseColors.gray200,
-        navigationText: baseColors.gray900,
-        navigationTextActive: baseColors.primary,
-
-        // Status específicos
-        successLight: '#ECFDF5',
-        warningLight: '#FFFBEB',
-        errorLight: '#FEF2F2',
-        infoLight: '#EFF6FF',
-    },
-
-    // Sombras
-    shadows: {
-        small: {
-            shadowColor: baseColors.gray900,
-            shadowOffset: { width: 0, height: 1 },
-            shadowOpacity: 0.1,
-            shadowRadius: 2,
-            elevation: 2,
-        },
-        medium: {
-            shadowColor: baseColors.gray900,
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.1,
-            shadowRadius: 4,
-            elevation: 4,
-        },
-        large: {
-            shadowColor: baseColors.gray900,
-            shadowOffset: { width: 0, height: 4 },
-            shadowOpacity: 0.12,
-            shadowRadius: 8,
-            elevation: 8,
-        },
-    },
-};
-
-// Tema escuro
-const darkTheme = {
-    colors: {
-        ...baseColors,
-
-        // Superfícies
-        background: baseColors.gray900,
-        surface: baseColors.gray800,
-        surfaceVariant: baseColors.gray700,
-        surfaceDisabled: baseColors.gray600,
-
-        // Textos
-        text: baseColors.white,
-        textSecondary: baseColors.gray300,
-        textTertiary: baseColors.gray400,
-        textDisabled: baseColors.gray500,
-        textInverse: baseColors.gray900,
-
-        // Bordas
-        border: baseColors.gray700,
-        borderLight: baseColors.gray600,
-        borderDark: baseColors.gray800,
-
-        // Inputs
-        inputBackground: baseColors.gray800,
-        inputBorder: baseColors.gray600,
-        inputFocused: baseColors.primaryLight,
-        inputError: baseColors.error,
-
-        // Cards
-        cardBackground: baseColors.gray800,
-        cardBorder: baseColors.gray700,
-        cardShadow: baseColors.black,
-
-        // Navigation
-        navigationBackground: baseColors.gray900,
-        navigationBorder: baseColors.gray800,
-        navigationText: baseColors.white,
-        navigationTextActive: baseColors.primaryLight,
-
-        // Status específicos
-        successLight: '#065F46',
-        warningLight: '#92400E',
-        errorLight: '#991B1B',
-        infoLight: '#1E40AF',
-    },
-
-    // Sombras
-    shadows: {
-        small: {
-            shadowColor: baseColors.black,
-            shadowOffset: { width: 0, height: 1 },
-            shadowOpacity: 0.3,
-            shadowRadius: 2,
-            elevation: 2,
-        },
-        medium: {
-            shadowColor: baseColors.black,
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.3,
-            shadowRadius: 4,
-            elevation: 4,
-        },
-        large: {
-            shadowColor: baseColors.black,
-            shadowOffset: { width: 0, height: 4 },
-            shadowOpacity: 0.4,
-            shadowRadius: 8,
-            elevation: 8,
-        },
-    },
-};
-
 // Espaçamentos
 export const spacing = {
     xs: 4,
@@ -324,6 +178,168 @@ export const zIndex = {
     skipLink: 1600,
     toast: 1700,
     tooltip: 1800,
+};
+
+// Tema claro
+const lightTheme = {
+    colors: {
+        ...baseColors,
+
+        // Superfícies
+        background: baseColors.white,
+        surface: baseColors.white,
+        surfaceVariant: baseColors.gray50,
+        surfaceDisabled: baseColors.gray100,
+
+        // Textos
+        text: baseColors.gray900,
+        textSecondary: baseColors.gray600,
+        textTertiary: baseColors.gray400,
+        textDisabled: baseColors.gray300,
+        textInverse: baseColors.white,
+
+        // Bordas
+        border: baseColors.gray200,
+        borderLight: baseColors.gray100,
+        borderDark: baseColors.gray300,
+
+        // Inputs
+        inputBackground: baseColors.white,
+        inputBorder: baseColors.gray300,
+        inputFocused: baseColors.primary,
+        inputError: baseColors.error,
+
+        // Cards
+        cardBackground: baseColors.white,
+        cardBorder: baseColors.gray200,
+        cardShadow: baseColors.gray900,
+
+        // Navigation
+        navigationBackground: baseColors.white,
+        navigationBorder: baseColors.gray200,
+        navigationText: baseColors.gray900,
+        navigationTextActive: baseColors.primary,
+
+        // Status específicos
+        successLight: '#ECFDF5',
+        warningLight: '#FFFBEB',
+        errorLight: '#FEF2F2',
+        infoLight: '#EFF6FF',
+    },
+
+    // Sombras
+    shadows: {
+        small: {
+            shadowColor: baseColors.gray900,
+            shadowOffset: { width: 0, height: 1 },
+            shadowOpacity: 0.1,
+            shadowRadius: 2,
+            elevation: 2,
+        },
+        medium: {
+            shadowColor: baseColors.gray900,
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.1,
+            shadowRadius: 4,
+            elevation: 4,
+        },
+        large: {
+            shadowColor: baseColors.gray900,
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: 0.12,
+            shadowRadius: 8,
+            elevation: 8,
+        },
+    },
+
+    // Incluir todas as outras propriedades
+    spacing,
+    typography,
+    borderRadius,
+    sizes,
+    animations,
+    zIndex,
+};
+
+// Tema escuro
+const darkTheme = {
+    colors: {
+        ...baseColors,
+
+        // Superfícies
+        background: baseColors.gray900,
+        surface: baseColors.gray800,
+        surfaceVariant: baseColors.gray700,
+        surfaceDisabled: baseColors.gray600,
+
+        // Textos
+        text: baseColors.white,
+        textSecondary: baseColors.gray300,
+        textTertiary: baseColors.gray400,
+        textDisabled: baseColors.gray500,
+        textInverse: baseColors.gray900,
+
+        // Bordas
+        border: baseColors.gray700,
+        borderLight: baseColors.gray600,
+        borderDark: baseColors.gray800,
+
+        // Inputs
+        inputBackground: baseColors.gray800,
+        inputBorder: baseColors.gray600,
+        inputFocused: baseColors.primaryLight,
+        inputError: baseColors.error,
+
+        // Cards
+        cardBackground: baseColors.gray800,
+        cardBorder: baseColors.gray700,
+        cardShadow: baseColors.black,
+
+        // Navigation
+        navigationBackground: baseColors.gray900,
+        navigationBorder: baseColors.gray800,
+        navigationText: baseColors.white,
+        navigationTextActive: baseColors.primaryLight,
+
+        // Status específicos
+        successLight: '#065F46',
+        warningLight: '#92400E',
+        errorLight: '#991B1B',
+        infoLight: '#1E40AF',
+    },
+
+    // Sombras
+    shadows: {
+        small: {
+            shadowColor: baseColors.black,
+            shadowOffset: { width: 0, height: 1 },
+            shadowOpacity: 0.3,
+            shadowRadius: 2,
+            elevation: 2,
+        },
+        medium: {
+            shadowColor: baseColors.black,
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.3,
+            shadowRadius: 4,
+            elevation: 4,
+        },
+        large: {
+            shadowColor: baseColors.black,
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: 0.4,
+            shadowRadius: 8,
+            elevation: 8,
+        },
+    },
+
+    // Incluir todas as outras propriedades
+    spacing,
+    typography,
+    borderRadius,
+    sizes,
+    animations,
+    zIndex,
 };
 
 // Tema principal
