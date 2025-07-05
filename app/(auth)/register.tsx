@@ -1,8 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as Haptics from 'expo-haptics';
-import { router } from 'expo-router';
-import React, { useRef } from 'react';
+import { router, useLocalSearchParams } from 'expo-router';
+import React, { useRef, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import {
     Alert,
@@ -24,7 +24,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import type { RegisterData } from '@/types';
 
-// Schema de validação
+// Schema de validação para nova empresa
 const registerSchema = yup.object().shape({
     nome: yup
         .string()
@@ -41,7 +41,7 @@ const registerSchema = yup.object().shape({
     empresa: yup
         .string()
         .min(2, 'Nome da empresa deve ter pelo menos 2 caracteres')
-        .optional(),
+        .required('Nome da empresa é obrigatório'),
     password: yup
         .string()
         .min(6, 'Senha deve ter pelo menos 6 caracteres')
@@ -56,22 +56,44 @@ const registerSchema = yup.object().shape({
         .required(),
 });
 
+// Schema para aceitar convite
+const acceptInviteSchema = yup.object().shape({
+    nome: yup
+        .string()
+        .min(2, 'Nome deve ter pelo menos 2 caracteres')
+        .required('Nome é obrigatório'),
+    telefone: yup
+        .string()
+        .matches(/^\(\d{2}\)\s\d{4,5}-\d{4}$/, 'Telefone inválido')
+        .optional(),
+    password: yup
+        .string()
+        .min(6, 'Senha deve ter pelo menos 6 caracteres')
+        .required('Senha é obrigatória'),
+    confirmPassword: yup
+        .string()
+        .oneOf([yup.ref('password')], 'Senhas não coincidem')
+        .required('Confirmação de senha é obrigatória'),
+});
+
 export default function RegisterScreen() {
     const { theme } = useTheme();
-    const { register, isLoading, error } = useAuth();
+    const { register, acceptInvite, isLoading, error } = useAuth();
     const insets = useSafeAreaInsets();
+    const params = useLocalSearchParams();
+
+    // Estado para controle de modo
+    const [isInviteMode, setIsInviteMode] = useState(false);
+    const [inviteToken, setInviteToken] = useState<string | null>(null);
+    const [inviteInfo, setInviteInfo] = useState<any>(null);
 
     // Animações simples
     const fadeAnim = useRef(new Animated.Value(0)).current;
 
-    const {
-        control,
-        handleSubmit,
-        formState: { errors, isValid },
-    } = useForm<RegisterData & { acceptTerms: boolean }>({
+    // Forms
+    const registerForm = useForm<RegisterData & { acceptTerms: boolean }>({
         resolver: yupResolver(registerSchema) as any,
         mode: 'onBlur',
-        reValidateMode: 'onBlur',
         defaultValues: {
             nome: '',
             email: '',
@@ -83,7 +105,28 @@ export default function RegisterScreen() {
         },
     });
 
-    // Animação de entrada suave
+    const inviteForm = useForm({
+        resolver: yupResolver(acceptInviteSchema),
+        mode: 'onBlur',
+        defaultValues: {
+            nome: '',
+            telefone: '',
+            password: '',
+            confirmPassword: '',
+        },
+    });
+
+    // Verificar se há token de convite
+    React.useEffect(() => {
+        const token = params.token as string;
+        if (token) {
+            setInviteToken(token);
+            setIsInviteMode(true);
+            loadInviteInfo(token);
+        }
+    }, [params]);
+
+    // Animação de entrada
     React.useEffect(() => {
         Animated.timing(fadeAnim, {
             toValue: 1,
@@ -92,7 +135,21 @@ export default function RegisterScreen() {
         }).start();
     }, []);
 
-    const onSubmit = async (data: RegisterData & { acceptTerms: boolean }) => {
+    const loadInviteInfo = async (token: string) => {
+        try {
+            // TODO: Implementar busca real do convite
+            setInviteInfo({
+                empresa: 'Silva Construções LTDA',
+                role: 'Engenheiro',
+                email: 'maria@email.com'
+            });
+        } catch (error) {
+            Alert.alert('Erro', 'Convite inválido ou expirado');
+            setIsInviteMode(false);
+        }
+    };
+
+    const handleRegister = async (data: RegisterData & { acceptTerms: boolean }) => {
         try {
             await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
@@ -102,18 +159,37 @@ export default function RegisterScreen() {
             await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
             Alert.alert(
-                'Conta Criada!',
-                'Sua conta foi criada com sucesso. Verifique seu email para confirmar o cadastro.',
-                [{ text: 'OK', onPress: () => router.replace('/(auth)/login') }]
+                'Empresa Criada!',
+                `Sua empresa "${data.empresa}" foi criada com sucesso!`,
+                [{ text: 'OK', onPress: () => router.replace('/(tabs)') }]
             );
         } catch (error) {
             await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+            Alert.alert('Erro', error instanceof Error ? error.message : 'Erro desconhecido');
+        }
+    };
+
+    const handleAcceptInvite = async (data: any) => {
+        if (!inviteToken) return;
+
+        try {
+            await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
+            await acceptInvite(inviteToken, {
+                ...data,
+                email: inviteInfo?.email
+            });
+
+            await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
             Alert.alert(
-                'Erro no Cadastro',
-                error instanceof Error ? error.message : 'Erro desconhecido',
-                [{ text: 'OK', style: 'default' }]
+                'Bem-vindo!',
+                `Você foi adicionado à equipe de ${inviteInfo?.empresa}!`,
+                [{ text: 'Continuar', onPress: () => router.replace('/(tabs)') }]
             );
+        } catch (error) {
+            await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+            Alert.alert('Erro', error instanceof Error ? error.message : 'Erro desconhecido');
         }
     };
 
@@ -129,6 +205,9 @@ export default function RegisterScreen() {
             return numbers.replace(/(\d{2})(\d{5})(\d{0,4})/, '($1) $2-$3').replace(/-$/, '');
         }
     };
+
+    const currentForm = isInviteMode ? inviteForm : registerForm;
+    const currentSubmit = isInviteMode ? handleAcceptInvite : handleRegister;
 
     return (
         <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
@@ -169,26 +248,69 @@ export default function RegisterScreen() {
                         {/* Header */}
                         <View style={styles.header}>
                             <Text style={[styles.title, { color: theme.colors.text }]}>
-                                Vamos criar sua conta
+                                {isInviteMode ? 'Aceitar convite' : 'Vamos criar sua conta'}
                             </Text>
                             <Text style={[styles.subtitle, { color: theme.colors.textSecondary }]}>
-                                Olá usuário, você terá{'\n'}uma jornada incrível
+                                {isInviteMode
+                                    ? `Junte-se à equipe de\n${inviteInfo?.empresa || 'uma empresa'}`
+                                    : 'Você terá uma jornada\nincrível na gestão de obras'
+                                }
                             </Text>
                         </View>
 
+                        {/* Convite Info */}
+                        {isInviteMode && inviteInfo && (
+                            <View style={[styles.inviteCard, {
+                                backgroundColor: theme.colors.primary + '10',
+                                borderColor: theme.colors.primary + '30'
+                            }]}>
+                                <View style={[styles.inviteIcon, { backgroundColor: theme.colors.primary }]}>
+                                    <Ionicons name="business" size={24} color={theme.colors.white} />
+                                </View>
+                                <View style={styles.inviteDetails}>
+                                    <Text style={[styles.inviteCompany, { color: theme.colors.text }]}>
+                                        {inviteInfo.empresa}
+                                    </Text>
+                                    <Text style={[styles.inviteRole, { color: theme.colors.textSecondary }]}>
+                                        Cargo: {inviteInfo.role}
+                                    </Text>
+                                </View>
+                            </View>
+                        )}
+
+                        {/* Mode Toggle */}
+                        {!inviteToken && (
+                            <View style={styles.modeToggle}>
+                                <Button
+                                    title="Criar Empresa"
+                                    onPress={() => setIsInviteMode(false)}
+                                    variant={!isInviteMode ? 'primary' : 'outline'}
+                                    size="medium"
+                                    style={styles.toggleButton}
+                                />
+                                <Button
+                                    title="Tenho Convite"
+                                    onPress={() => setIsInviteMode(true)}
+                                    variant={isInviteMode ? 'primary' : 'outline'}
+                                    size="medium"
+                                    style={styles.toggleButton}
+                                />
+                            </View>
+                        )}
+
                         {/* Form */}
                         <View style={styles.form}>
-                            {/* Nome Input */}
+                            {/* Nome */}
                             <Controller
-                                control={control}
+                                control={currentForm.control}
                                 name="nome"
                                 render={({ field: { onChange, onBlur, value } }) => (
                                     <Input
-                                        placeholder="Nome"
+                                        placeholder="Nome completo"
                                         value={value}
                                         onChangeText={onChange}
                                         onBlur={onBlur}
-                                        error={errors.nome?.message}
+                                        error={currentForm.formState.errors.nome?.message}
                                         autoCapitalize="words"
                                         size="large"
                                         containerStyle={styles.inputContainer}
@@ -196,37 +318,69 @@ export default function RegisterScreen() {
                                 )}
                             />
 
-                            {/* Email Input */}
-                            <Controller
-                                control={control}
-                                name="email"
-                                render={({ field: { onChange, onBlur, value } }) => (
-                                    <Input
-                                        placeholder="Email"
-                                        value={value}
-                                        onChangeText={onChange}
-                                        onBlur={onBlur}
-                                        error={errors.email?.message}
-                                        keyboardType="email-address"
-                                        autoCapitalize="none"
-                                        autoComplete="email"
-                                        size="large"
-                                        containerStyle={styles.inputContainer}
-                                    />
-                                )}
-                            />
+                            {/* Email - apenas se não for convite */}
+                            {!isInviteMode && (
+                                <Controller
+                                    control={registerForm.control}
+                                    name="email"
+                                    render={({ field: { onChange, onBlur, value } }) => (
+                                        <Input
+                                            placeholder="Email"
+                                            value={value}
+                                            onChangeText={onChange}
+                                            onBlur={onBlur}
+                                            error={registerForm.formState.errors.email?.message}
+                                            keyboardType="email-address"
+                                            autoCapitalize="none"
+                                            size="large"
+                                            containerStyle={styles.inputContainer}
+                                        />
+                                    )}
+                                />
+                            )}
 
-                            {/* Telefone Input */}
+                            {/* Empresa - apenas se não for convite */}
+                            {!isInviteMode && (
+                                <Controller
+                                    control={registerForm.control}
+                                    name="empresa"
+                                    render={({ field: { onChange, onBlur, value } }) => (
+                                        <Input
+                                            placeholder="Nome da empresa"
+                                            value={value}
+                                            onChangeText={onChange}
+                                            onBlur={onBlur}
+                                            error={registerForm.formState.errors.empresa?.message}
+                                            autoCapitalize="words"
+                                            size="large"
+                                            containerStyle={styles.inputContainer}
+                                        />
+                                    )}
+                                />
+                            )}
+
+                            {/* Token - apenas se for convite sem info */}
+                            {isInviteMode && !inviteInfo && (
+                                <Input
+                                    placeholder="Token do convite"
+                                    value={inviteToken || ''}
+                                    onChangeText={setInviteToken}
+                                    size="large"
+                                    containerStyle={styles.inputContainer}
+                                />
+                            )}
+
+                            {/* Telefone */}
                             <Controller
-                                control={control}
+                                control={currentForm.control}
                                 name="telefone"
                                 render={({ field: { onChange, onBlur, value } }) => (
                                     <Input
-                                        placeholder="Telefone"
+                                        placeholder="Telefone (opcional)"
                                         value={value}
                                         onChangeText={(text) => onChange(formatPhone(text))}
                                         onBlur={onBlur}
-                                        error={errors.telefone?.message}
+                                        error={currentForm.formState.errors.telefone?.message}
                                         keyboardType="phone-pad"
                                         maxLength={15}
                                         size="large"
@@ -235,47 +389,27 @@ export default function RegisterScreen() {
                                 )}
                             />
 
-                            {/* Empresa Input */}
+                            {/* Senha */}
                             <Controller
-                                control={control}
-                                name="empresa"
-                                render={({ field: { onChange, onBlur, value } }) => (
-                                    <Input
-                                        placeholder="Empresa (opcional)"
-                                        value={value}
-                                        onChangeText={onChange}
-                                        onBlur={onBlur}
-                                        error={errors.empresa?.message}
-                                        autoCapitalize="words"
-                                        size="large"
-                                        containerStyle={styles.inputContainer}
-                                    />
-                                )}
-                            />
-
-                            {/* Password Input */}
-                            <Controller
-                                control={control}
+                                control={currentForm.control}
                                 name="password"
                                 render={({ field: { onChange, onBlur, value } }) => (
                                     <Input
-                                        placeholder="Senha"
+                                        placeholder={isInviteMode ? "Criar senha" : "Senha"}
                                         value={value}
                                         onChangeText={onChange}
                                         onBlur={onBlur}
-                                        error={errors.password?.message}
+                                        error={currentForm.formState.errors.password?.message}
                                         isPassword
                                         size="large"
                                         containerStyle={styles.inputContainer}
-                                        autoComplete="new-password"
-                                        textContentType="newPassword"
                                     />
                                 )}
                             />
 
-                            {/* Confirm Password Input */}
+                            {/* Confirmar Senha */}
                             <Controller
-                                control={control}
+                                control={currentForm.control}
                                 name="confirmPassword"
                                 render={({ field: { onChange, onBlur, value } }) => (
                                     <Input
@@ -283,60 +417,60 @@ export default function RegisterScreen() {
                                         value={value}
                                         onChangeText={onChange}
                                         onBlur={onBlur}
-                                        error={errors.confirmPassword?.message}
+                                        error={currentForm.formState.errors.confirmPassword?.message}
                                         isPassword
                                         size="large"
                                         containerStyle={styles.inputContainer}
-                                        autoComplete="new-password"
-                                        textContentType="newPassword"
                                     />
                                 )}
                             />
 
-                            {/* Terms Checkbox */}
-                            <Controller
-                                control={control}
-                                name="acceptTerms"
-                                render={({ field: { onChange, value } }) => (
-                                    <View style={styles.termsContainer}>
-                                        <Pressable
-                                            style={styles.checkboxContainer}
-                                            onPress={() => onChange(!value)}
-                                        >
-                                            <View style={[
-                                                styles.checkbox,
-                                                {
-                                                    borderColor: value ? theme.colors.primary : theme.colors.border,
-                                                    backgroundColor: value ? theme.colors.primary : 'transparent',
-                                                }
-                                            ]}>
-                                                {value && (
-                                                    <Ionicons
-                                                        name="checkmark"
-                                                        size={14}
-                                                        color={theme.colors.white}
-                                                    />
-                                                )}
-                                            </View>
-                                            <Text style={[styles.termsText, { color: theme.colors.textSecondary }]}>
-                                                Eu concordo com os{' '}
-                                                <Text style={[styles.termsLink, { color: theme.colors.primary }]}>
-                                                    Termos de Serviço
+                            {/* Terms - apenas para nova empresa */}
+                            {!isInviteMode && (
+                                <Controller
+                                    control={registerForm.control}
+                                    name="acceptTerms"
+                                    render={({ field: { onChange, value } }) => (
+                                        <View style={styles.termsContainer}>
+                                            <Pressable
+                                                style={styles.checkboxContainer}
+                                                onPress={() => onChange(!value)}
+                                            >
+                                                <View style={[
+                                                    styles.checkbox,
+                                                    {
+                                                        borderColor: value ? theme.colors.primary : theme.colors.border,
+                                                        backgroundColor: value ? theme.colors.primary : 'transparent',
+                                                    }
+                                                ]}>
+                                                    {value && (
+                                                        <Ionicons
+                                                            name="checkmark"
+                                                            size={14}
+                                                            color={theme.colors.white}
+                                                        />
+                                                    )}
+                                                </View>
+                                                <Text style={[styles.termsText, { color: theme.colors.textSecondary }]}>
+                                                    Eu concordo com os{' '}
+                                                    <Text style={[styles.termsLink, { color: theme.colors.primary }]}>
+                                                        Termos de Serviço
+                                                    </Text>
+                                                    {' '}e{' '}
+                                                    <Text style={[styles.termsLink, { color: theme.colors.primary }]}>
+                                                        Política de Privacidade
+                                                    </Text>
                                                 </Text>
-                                                {' '}e{' '}
-                                                <Text style={[styles.termsLink, { color: theme.colors.primary }]}>
-                                                    Política de Privacidade
+                                            </Pressable>
+                                            {registerForm.formState.errors.acceptTerms && (
+                                                <Text style={[styles.errorText, { color: theme.colors.error }]}>
+                                                    {registerForm.formState.errors.acceptTerms.message}
                                                 </Text>
-                                            </Text>
-                                        </Pressable>
-                                        {errors.acceptTerms && (
-                                            <Text style={[styles.errorText, { color: theme.colors.error }]}>
-                                                {errors.acceptTerms.message}
-                                            </Text>
-                                        )}
-                                    </View>
-                                )}
-                            />
+                                            )}
+                                        </View>
+                                    )}
+                                />
+                            )}
 
                             {/* Error Message */}
                             {error && (
@@ -346,21 +480,21 @@ export default function RegisterScreen() {
                                         size={20}
                                         color={theme.colors.error}
                                     />
-                                    <Text style={[styles.errorText, { color: theme.colors.error }]}>
+                                    <Text style={[styles.errorMessage, { color: theme.colors.error }]}>
                                         {error}
                                     </Text>
                                 </View>
                             )}
 
-                            {/* Sign Up Button */}
+                            {/* Submit Button */}
                             <Button
-                                title="Cadastrar"
-                                onPress={handleSubmit(onSubmit)}
+                                title={isInviteMode ? "Aceitar convite" : "Criar conta"}
+                                onPress={currentForm.handleSubmit(currentSubmit)}
                                 loading={isLoading}
-                                disabled={!isValid || isLoading}
+                                disabled={!currentForm.formState.isValid || isLoading}
                                 variant="primary"
                                 size="large"
-                                style={styles.signUpButton}
+                                style={styles.submitButton}
                             />
                         </View>
 
@@ -426,6 +560,46 @@ const styles = StyleSheet.create({
         lineHeight: 28,
     },
 
+    // Invite Card
+    inviteCard: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        padding: 16,
+        borderRadius: 12,
+        borderWidth: 1,
+        gap: 12,
+    },
+    inviteIcon: {
+        width: 48,
+        height: 48,
+        borderRadius: 24,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    inviteDetails: {
+        flex: 1,
+    },
+    inviteCompany: {
+        fontSize: 16,
+        fontWeight: '600',
+        fontFamily: 'Inter-Medium',
+        marginBottom: 2,
+    },
+    inviteRole: {
+        fontSize: 14,
+        fontFamily: 'Inter-Regular',
+    },
+
+    // Mode Toggle
+    modeToggle: {
+        flexDirection: 'row',
+        gap: 12,
+        marginBottom: -16,
+    },
+    toggleButton: {
+        flex: 1,
+    },
+
     // Form
     form: {
         gap: 16,
@@ -472,18 +646,22 @@ const styles = StyleSheet.create({
         gap: 12,
         borderWidth: 1,
         borderColor: 'rgba(239, 68, 68, 0.2)',
-        marginTop: 8,
+    },
+    errorMessage: {
+        fontSize: 14,
+        fontFamily: 'Inter-Medium',
+        flex: 1,
+        lineHeight: 20,
     },
     errorText: {
         fontSize: 12,
         fontFamily: 'Inter-Regular',
-        lineHeight: 16,
         marginTop: 4,
         marginLeft: 4,
     },
 
-    // Sign Up Button
-    signUpButton: {
+    // Submit Button
+    submitButton: {
         marginTop: 8,
         borderRadius: 12,
         height: 56,
