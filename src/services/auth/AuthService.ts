@@ -1,4 +1,6 @@
+// src/services/auth/AuthService.ts
 import type { LoginCredentials, RegisterData, User, UserProfile } from '@/types';
+import type { CreateTenantData } from '@/types/tenant';
 import {
     createUserWithEmailAndPassword,
     sendEmailVerification,
@@ -11,10 +13,10 @@ import {
     doc,
     getDoc,
     serverTimestamp,
-    setDoc,
-    updateDoc,
+    setDoc
 } from 'firebase/firestore';
-import { executeQuery } from '../database/sqlite';
+import { v4 as uuidv4 } from 'uuid';
+import { executeQuery, executeSelectQuery } from '../database/sqlite';
 import { auth, FirebaseConfig, firestore } from '../firebase/config';
 import { NetworkService } from '../network/NetworkService';
 import { SecureStorage } from '../storage/SecureStorage';
@@ -33,7 +35,7 @@ export class AuthService {
     }
 
     /**
-     * Login do usuário (online/offline)
+     * Login do usuário (online/offline) - MÉTODO PRINCIPAL
      */
     async login(credentials: LoginCredentials): Promise<{ user: User; token: string }> {
         try {
@@ -63,37 +65,30 @@ export class AuthService {
         const firebaseUser = userCredential.user;
         const token = await firebaseUser.getIdToken();
 
-        // Buscar dados completos do usuário no Firestore
-        const userDoc = await getDoc(doc(firestore, FirebaseConfig.collections.users, firebaseUser.uid));
+        // Buscar dados completos do usuário no banco local primeiro
+        let user = await this.getUserFromLocal(firebaseUser.uid);
 
-        if (!userDoc.exists()) {
-            throw new Error('Dados do usuário não encontrados');
+        if (!user) {
+            // Se não existe localmente, buscar no Firestore
+            const userDoc = await getDoc(doc(firestore, FirebaseConfig.collections.users, firebaseUser.uid));
+
+            if (!userDoc.exists()) {
+                throw new Error('Dados do usuário não encontrados');
+            }
+
+            const userData = userDoc.data();
+            user = await this.createUserFromFirestore(userData, firebaseUser.uid);
         }
 
-        const userData = userDoc.data();
-        const user: User = {
-            id: 0, // Será atualizado pelo SQLite
-            uuid: firebaseUser.uid,
-            nome: userData.nome || firebaseUser.displayName || '',
-            email: firebaseUser.email || '',
-            telefone: userData.telefone,
-            perfil: userData.perfil || 'operador',
-            avatar_url: userData.avatar_url || firebaseUser.photoURL,
-            empresa: userData.empresa,
-            created_at: userData.created_at || new Date().toISOString(),
-            updated_at: userData.updated_at || new Date().toISOString(),
-            synced_at: new Date().toISOString(),
-            is_active: true,
-        };
-
-        // Salvar usuário no banco local
-        await this.saveUserToLocal(user);
+        // Verificar se usuário tem tenant_id
+        if (!user.tenant_id) {
+            throw new Error('Usuário não está associado a nenhuma empresa');
+        }
 
         // Salvar token e credenciais seguras
         await SecureStorage.setItem('auth_token', token);
         await SecureStorage.setItem('user_credentials', JSON.stringify({
             email: credentials.email,
-            // Hash da senha para validação offline (nunca salvar senha plain text)
             passwordHash: await this.hashPassword(credentials.password),
         }));
 
@@ -101,11 +96,8 @@ export class AuthService {
             await SecureStorage.setItem('remember_login', 'true');
         }
 
-        // Atualizar último login no Firestore
-        await updateDoc(doc(firestore, FirebaseConfig.collections.users, firebaseUser.uid), {
-            last_login: serverTimestamp(),
-            updated_at: serverTimestamp(),
-        });
+        // Atualizar último login
+        await this.updateLastLogin(user.uuid);
 
         this.currentUser = user;
 
@@ -116,7 +108,7 @@ export class AuthService {
     }
 
     /**
-     * Login offline (verificação local)
+     * Login offline (verificação local) - CORRIGIDO
      */
     private async loginOffline(credentials: LoginCredentials): Promise<{ user: User; token: string }> {
         // Verificar se há credenciais salvas
@@ -138,30 +130,37 @@ export class AuthService {
             throw new Error('Senha incorreta');
         }
 
-        // Buscar usuário no banco local
-        const result = await executeQuery(
+        // ✅ CORRIGIDO: Usar executeSelectQuery corretamente
+        const result = await executeSelectQuery(
             'SELECT * FROM usuarios WHERE email = ? AND is_active = 1',
             [credentials.email]
         );
 
-        if (result.rows.length === 0) {
+        if (result.length === 0) {
             throw new Error('Usuário não encontrado no banco local');
         }
 
-        const userData = result.rows.item(0);
+        const userData = result[0]; // ✅ CORRETO: result[0] ao invés de result.rows.item(0)
+
+        // ✅ CORRIGIDO: Incluir todos os campos obrigatórios
         const user: User = {
             id: userData.id,
             uuid: userData.uuid,
+            tenant_id: userData.tenant_id,
             nome: userData.nome,
             email: userData.email,
             telefone: userData.telefone,
             perfil: userData.perfil,
+            perfil_global: userData.perfil_global,
             avatar_url: userData.avatar_url,
             empresa: userData.empresa,
+            is_tenant_owner: userData.is_tenant_owner === 1,
             created_at: userData.created_at,
             updated_at: userData.updated_at,
             synced_at: userData.synced_at,
             is_active: userData.is_active === 1,
+            last_login_at: userData.last_login_at,
+            email_verified: userData.email_verified === 1,
         };
 
         // Gerar token offline (UUID temporário)
@@ -175,7 +174,7 @@ export class AuthService {
     }
 
     /**
-     * Cadastro de novo usuário
+     * Cadastro de novo usuário - MÉTODO PRINCIPAL
      */
     async register(data: RegisterData): Promise<{ user: User; token: string }> {
         const isOnline = await NetworkService.isConnected();
@@ -199,47 +198,73 @@ export class AuthService {
                 displayName: data.nome,
             });
 
-            // Enviar email de verificação
-            await sendEmailVerification(firebaseUser);
+            // Gerar IDs
+            const userId = firebaseUser.uid;
+            const tenantId = uuidv4();
 
-            // Criar documento do usuário no Firestore
+            // Criar tenant primeiro
+            const tenantData: CreateTenantData = {
+                nome: data.empresa || `Empresa de ${data.nome}`,
+                slug: this.generateSlugFromName(data.empresa || data.nome),
+                email_contato: data.email,
+                telefone: data.telefone,
+            };
+
+            await this.createTenantInDatabase(tenantId, tenantData);
+
+            // Criar usuário
             const userData = {
+                uuid: userId,
+                tenant_id: tenantId,
                 nome: data.nome,
                 email: data.email,
                 telefone: data.telefone,
+                perfil: 'admin' as UserProfile, // Primeiro usuário é admin
+                perfil_global: 'tenant_admin',
+                is_tenant_owner: true,
                 empresa: data.empresa,
-                perfil: 'operador' as UserProfile, // Perfil padrão
                 avatar_url: null,
-                created_at: serverTimestamp(),
-                updated_at: serverTimestamp(),
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
                 email_verified: false,
                 is_active: true,
             };
 
+            // Salvar no Firestore
             await setDoc(
-                doc(firestore, FirebaseConfig.collections.users, firebaseUser.uid),
-                userData
+                doc(firestore, FirebaseConfig.collections.users, userId),
+                {
+                    ...userData,
+                    created_at: serverTimestamp(),
+                    updated_at: serverTimestamp(),
+                }
             );
+
+            // Salvar no banco local
+            await this.saveUserToLocal(userData);
+
+            // Enviar email de verificação
+            await sendEmailVerification(firebaseUser);
 
             const token = await firebaseUser.getIdToken();
 
             const user: User = {
                 id: 0,
-                uuid: firebaseUser.uid,
+                uuid: userId,
+                tenant_id: tenantId,
                 nome: data.nome,
                 email: data.email,
                 telefone: data.telefone,
-                perfil: 'operador',
+                perfil: 'admin',
+                perfil_global: 'tenant_admin',
                 avatar_url: undefined,
                 empresa: data.empresa,
+                is_tenant_owner: true,
                 created_at: new Date().toISOString(),
                 updated_at: new Date().toISOString(),
                 synced_at: new Date().toISOString(),
                 is_active: true,
             };
-
-            // Salvar no banco local
-            await this.saveUserToLocal(user);
 
             // Salvar credenciais
             await SecureStorage.setItem('auth_token', token);
@@ -253,6 +278,157 @@ export class AuthService {
             return { user, token };
         } catch (error) {
             console.error('Erro no cadastro:', error);
+            throw this.handleAuthError(error);
+        }
+    }
+
+    /**
+     * Criar tenant e usuário (para first-time setup)
+     */
+    async createTenantAndUser(tenantData: CreateTenantData, userData: RegisterData): Promise<{ user: User; token: string }> {
+        const isOnline = await NetworkService.isConnected();
+        if (!isOnline) {
+            throw new Error('Criação de empresa requer conexão com a internet');
+        }
+
+        try {
+            // Criar usuário no Firebase
+            const userCredential = await createUserWithEmailAndPassword(
+                auth,
+                userData.email,
+                userData.password
+            );
+
+            const firebaseUser = userCredential.user;
+            const userId = firebaseUser.uid;
+            const tenantId = uuidv4();
+
+            // Criar tenant
+            await this.createTenantInDatabase(tenantId, tenantData);
+
+            // Criar usuário como owner
+            const userDataComplete = {
+                uuid: userId,
+                tenant_id: tenantId,
+                nome: userData.nome,
+                email: userData.email,
+                telefone: userData.telefone,
+                perfil: 'admin' as UserProfile,
+                perfil_global: 'tenant_admin',
+                is_tenant_owner: true,
+                empresa: tenantData.nome,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+                is_active: true,
+            };
+
+            // Salvar no Firebase e local
+            await setDoc(doc(firestore, FirebaseConfig.collections.users, userId), {
+                ...userDataComplete,
+                created_at: serverTimestamp(),
+                updated_at: serverTimestamp(),
+            });
+
+            await this.saveUserToLocal(userDataComplete);
+
+            const token = await firebaseUser.getIdToken();
+
+            const user: User = {
+                ...userDataComplete,
+                id: 0,
+                synced_at: new Date().toISOString(),
+            };
+
+            this.currentUser = user;
+
+            return { user, token };
+        } catch (error) {
+            console.error('Erro ao criar tenant e usuário:', error);
+            throw this.handleAuthError(error);
+        }
+    }
+
+    /**
+     * Entrar em tenant via convite - CORRIGIDO
+     */
+    async joinTenantByInvite(inviteToken: string, userData: any): Promise<{ user: User; token: string }> {
+        try {
+            // ✅ CORRIGIDO: Usar executeSelectQuery
+            const inviteResult = await executeSelectQuery(
+                'SELECT * FROM convites_tenant WHERE token = ? AND status = ?',
+                [inviteToken, 'pendente']
+            );
+
+            if (inviteResult.length === 0) {
+                throw new Error('Convite não encontrado ou expirado');
+            }
+
+            const invite = inviteResult[0]; // ✅ CORRETO: result[0]
+
+            // Verificar se já existe usuário
+            let firebaseUser;
+
+            try {
+                // Tentar fazer login
+                const credential = await signInWithEmailAndPassword(auth, invite.email, userData.password);
+                firebaseUser = credential.user;
+            } catch (error) {
+                // Se não existe, criar novo
+                const credential = await createUserWithEmailAndPassword(auth, invite.email, userData.password);
+                firebaseUser = credential.user;
+            }
+
+            // Criar/atualizar usuário no tenant
+            const userDataComplete = {
+                uuid: firebaseUser.uid,
+                tenant_id: invite.tenant_id,
+                nome: userData.nome,
+                email: invite.email,
+                telefone: userData.telefone,
+                perfil: invite.perfil_tenant as UserProfile,
+                perfil_global: 'user',
+                is_tenant_owner: false,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+                is_active: true,
+            };
+
+            await this.saveUserToLocal(userDataComplete);
+
+            // Marcar convite como aceito
+            await executeQuery(
+                'UPDATE convites_tenant SET status = ?, updated_at = ? WHERE uuid = ?',
+                ['aceito', new Date().toISOString(), invite.uuid]
+            );
+
+            const token = await firebaseUser.getIdToken();
+
+            // ✅ CORRIGIDO: Incluir todos os campos obrigatórios
+            const user: User = {
+                id: 0, // Será definido pelo SQLite
+                uuid: firebaseUser.uid,
+                tenant_id: invite.tenant_id,
+                nome: userData.nome,
+                email: invite.email,
+                telefone: userData.telefone,
+                perfil: invite.perfil_tenant,
+                perfil_global: 'user',
+                avatar_url: undefined,
+                empresa: undefined,
+                is_tenant_owner: false,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+                synced_at: new Date().toISOString(),
+                is_active: true,
+                last_login_at: undefined,
+                email_verified: false,
+            };
+
+            this.currentUser = user;
+
+            return { user, token };
+        } catch (error) {
+            console.error('Erro ao aceitar convite:', error);
             throw this.handleAuthError(error);
         }
     }
@@ -272,6 +448,7 @@ export class AuthService {
             await SecureStorage.removeItem('auth_token');
             await SecureStorage.removeItem('user_credentials');
             await SecureStorage.removeItem('remember_login');
+            await SecureStorage.removeItem('current_tenant_id');
 
             this.currentUser = null;
             this.isOfflineMode = false;
@@ -315,7 +492,7 @@ export class AuthService {
     }
 
     /**
-     * Obter usuário atual
+     * Obter usuário atual - MÉTODO PRINCIPAL CORRIGIDO
      */
     async getCurrentUser(): Promise<User | null> {
         if (this.currentUser) {
@@ -326,26 +503,33 @@ export class AuthService {
             const token = await SecureStorage.getItem('auth_token');
             if (!token) return null;
 
-            // Tentar carregar do banco local
-            const result = await executeQuery(
+            // ✅ CORRIGIDO: Usar executeSelectQuery corretamente
+            const result = await executeSelectQuery(
                 'SELECT * FROM usuarios WHERE is_active = 1 ORDER BY updated_at DESC LIMIT 1'
             );
 
-            if (result.rows.length > 0) {
-                const userData = result.rows.item(0);
+            if (result.length > 0) {
+                const userData = result[0]; // ✅ CORRETO: result[0]
+
+                // ✅ CORRIGIDO: Incluir todos os campos obrigatórios
                 this.currentUser = {
                     id: userData.id,
                     uuid: userData.uuid,
+                    tenant_id: userData.tenant_id,
                     nome: userData.nome,
                     email: userData.email,
                     telefone: userData.telefone,
                     perfil: userData.perfil,
+                    perfil_global: userData.perfil_global,
                     avatar_url: userData.avatar_url,
                     empresa: userData.empresa,
+                    is_tenant_owner: userData.is_tenant_owner === 1,
                     created_at: userData.created_at,
                     updated_at: userData.updated_at,
                     synced_at: userData.synced_at,
                     is_active: userData.is_active === 1,
+                    last_login_at: userData.last_login_at,
+                    email_verified: userData.email_verified === 1,
                 };
             }
 
@@ -357,28 +541,104 @@ export class AuthService {
     }
 
     /**
-     * Salvar usuário no banco local
+     * Atualizar perfil do usuário
      */
-    private async saveUserToLocal(user: User): Promise<void> {
+    async updateUserProfile(data: Partial<User>): Promise<void> {
+        if (!this.currentUser) throw new Error('Usuário não logado');
+
         try {
-            await executeQuery(
-                `INSERT OR REPLACE INTO usuarios 
-         (uuid, nome, email, telefone, perfil, avatar_url, empresa, created_at, updated_at, synced_at, is_active)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-                [
-                    user.uuid,
-                    user.nome,
-                    user.email,
-                    user.telefone,
-                    user.perfil,
-                    user.avatar_url,
-                    user.empresa,
-                    user.created_at,
-                    user.updated_at,
-                    user.synced_at,
-                    user.is_active ? 1 : 0,
-                ]
-            );
+            const updates = [];
+            const values = [];
+
+            // Campos que podem ser atualizados
+            const allowedFields = ['nome', 'telefone', 'avatar_url'];
+
+            allowedFields.forEach(field => {
+                if (data[field as keyof User] !== undefined) {
+                    updates.push(`${field} = ?`);
+                    values.push(data[field as keyof User]);
+                }
+            });
+
+            if (updates.length === 0) return;
+
+            updates.push('updated_at = ?');
+            values.push(new Date().toISOString());
+            values.push(this.currentUser.uuid);
+
+            await executeQuery(`
+                UPDATE usuarios SET ${updates.join(', ')} WHERE uuid = ?
+            `, values);
+
+            // Atualizar estado local
+            this.currentUser = {
+                ...this.currentUser,
+                ...data,
+                updated_at: new Date().toISOString(),
+            };
+        } catch (error) {
+            console.error('Erro ao atualizar perfil:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Utilities privadas
+     */
+
+    private async createTenantInDatabase(tenantId: string, data: CreateTenantData): Promise<void> {
+        const now = new Date().toISOString();
+
+        await executeQuery(`
+            INSERT INTO tenants (
+                id, nome, slug, email_contato, telefone, cnpj, 
+                plano, status, created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `, [
+            tenantId,
+            data.nome,
+            data.slug,
+            data.email_contato,
+            data.telefone || null,
+            data.cnpj || null,
+            'trial',
+            'ativo',
+            now,
+            now
+        ]);
+
+        // Criar registro de usage
+        await executeQuery(`
+            INSERT INTO tenant_usage (tenant_id, ultimo_calculo)
+            VALUES (?, ?)
+        `, [tenantId, now]);
+    }
+
+    private async saveUserToLocal(userData: any): Promise<void> {
+        try {
+            await executeQuery(`
+                INSERT OR REPLACE INTO usuarios (
+                    uuid, tenant_id, nome, email, telefone, perfil, perfil_global,
+                    avatar_url, empresa, is_tenant_owner, created_at, updated_at, 
+                    synced_at, is_active, email_verified
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `, [
+                userData.uuid,
+                userData.tenant_id,
+                userData.nome,
+                userData.email,
+                userData.telefone,
+                userData.perfil,
+                userData.perfil_global || 'user',
+                userData.avatar_url,
+                userData.empresa,
+                userData.is_tenant_owner ? 1 : 0,
+                userData.created_at,
+                userData.updated_at,
+                userData.synced_at || new Date().toISOString(),
+                userData.is_active ? 1 : 0,
+                userData.email_verified ? 1 : 0,
+            ]);
         } catch (error) {
             console.error('Erro ao salvar usuário local:', error);
             throw error;
@@ -386,10 +646,104 @@ export class AuthService {
     }
 
     /**
-     * Hash da senha para validação offline
+     * getUserFromLocal - CORRIGIDO
      */
+    private async getUserFromLocal(uuid?: string | null, email?: string): Promise<User | null> {
+        try {
+            let query = 'SELECT * FROM usuarios WHERE is_active = 1';
+            let params: any[] = [];
+
+            if (uuid) {
+                query += ' AND uuid = ?';
+                params.push(uuid);
+            } else if (email) {
+                query += ' AND email = ?';
+                params.push(email);
+            } else {
+                return null;
+            }
+
+            // ✅ CORRIGIDO: Usar executeSelectQuery corretamente
+            const result = await executeSelectQuery(query, params);
+
+            if (result.length === 0) return null;
+
+            const userData = result[0]; // ✅ CORRETO: result[0]
+
+            // ✅ CORRIGIDO: Incluir todos os campos
+            return {
+                id: userData.id,
+                uuid: userData.uuid,
+                tenant_id: userData.tenant_id,
+                nome: userData.nome,
+                email: userData.email,
+                telefone: userData.telefone,
+                perfil: userData.perfil,
+                perfil_global: userData.perfil_global,
+                avatar_url: userData.avatar_url,
+                empresa: userData.empresa,
+                is_tenant_owner: userData.is_tenant_owner === 1,
+                created_at: userData.created_at,
+                updated_at: userData.updated_at,
+                synced_at: userData.synced_at,
+                is_active: userData.is_active === 1,
+                last_login_at: userData.last_login_at,
+                email_verified: userData.email_verified === 1,
+            };
+        } catch (error) {
+            console.error('Erro ao buscar usuário local:', error);
+            return null;
+        }
+    }
+
+    private async createUserFromFirestore(firestoreData: any, uuid: string): Promise<User> {
+        const userData = {
+            uuid,
+            tenant_id: firestoreData.tenant_id,
+            nome: firestoreData.nome,
+            email: firestoreData.email,
+            telefone: firestoreData.telefone,
+            perfil: firestoreData.perfil,
+            perfil_global: firestoreData.perfil_global,
+            avatar_url: firestoreData.avatar_url,
+            empresa: firestoreData.empresa,
+            is_tenant_owner: firestoreData.is_tenant_owner || false,
+            created_at: firestoreData.created_at || new Date().toISOString(),
+            updated_at: firestoreData.updated_at || new Date().toISOString(),
+            synced_at: new Date().toISOString(),
+            is_active: true,
+            email_verified: firestoreData.email_verified || false,
+        };
+
+        await this.saveUserToLocal(userData);
+
+        return {
+            ...userData,
+            id: 0,
+        };
+    }
+
+    private async updateLastLogin(uuid: string): Promise<void> {
+        try {
+            await executeQuery(
+                'UPDATE usuarios SET last_login_at = ?, updated_at = ? WHERE uuid = ?',
+                [new Date().toISOString(), new Date().toISOString(), uuid]
+            );
+        } catch (error) {
+            console.warn('Erro ao atualizar último login:', error);
+        }
+    }
+
+    private generateSlugFromName(name: string): string {
+        return name
+            .toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/^-+|-+$/g, '');
+    }
+
     private async hashPassword(password: string): Promise<string> {
-        // Implementação simples - em produção use bcrypt ou similar
         const encoder = new TextEncoder();
         const data = encoder.encode(password + 'innoma_salt_2024');
         const hashBuffer = await crypto.subtle.digest('SHA-256', data);
@@ -397,9 +751,6 @@ export class AuthService {
         return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
     }
 
-    /**
-     * Tratar erros de autenticação
-     */
     private handleAuthError(error: any): Error {
         let message = 'Erro desconhecido';
 
@@ -434,6 +785,31 @@ export class AuthService {
         }
 
         return new Error(message);
+    }
+
+    // ========================================
+    // MÉTODOS DE COMPATIBILIDADE (LEGADOS)
+    // ========================================
+
+    /**
+     * Método legado - compatibilidade
+     */
+    async loginWithTenant(credentials: LoginCredentials): Promise<{ user: User; token: string }> {
+        return this.login(credentials);
+    }
+
+    /**
+     * Método legado - compatibilidade
+     */
+    async registerWithTenant(data: RegisterData): Promise<{ user: User; token: string }> {
+        return this.register(data);
+    }
+
+    /**
+     * Método legado - compatibilidade
+     */
+    async getCurrentUserWithTenant(): Promise<User | null> {
+        return this.getCurrentUser();
     }
 }
 

@@ -1,3 +1,4 @@
+// src/types/index.ts
 // ========================================
 // TIPOS BASE E UTILITÁRIOS
 // ========================================
@@ -22,18 +23,24 @@ export interface SyncEntity extends BaseEntity {
 }
 
 // ========================================
-// USUÁRIO E AUTENTICAÇÃO
+// USUÁRIO E AUTENTICAÇÃO - ATUALIZADO PARA MULTI-TENANT
 // ========================================
 
 export type UserProfile = 'admin' | 'engenheiro' | 'mestre' | 'operador' | 'visitante';
+export type UserGlobalRole = 'super_admin' | 'tenant_admin' | 'user';
 
 export interface User extends BaseEntity {
+    tenant_id: string; // 🔑 OBRIGATÓRIO - Chave do tenant
     nome: string;
     email: string;
     telefone?: string;
-    perfil: UserProfile;
+    perfil: UserProfile; // Perfil dentro do tenant
+    perfil_global?: UserGlobalRole; // Perfil global no sistema
     avatar_url?: string;
     empresa?: string;
+    is_tenant_owner?: boolean; // Se é dono do tenant
+    last_login_at?: DateString;
+    email_verified?: boolean;
 }
 
 export interface AuthState {
@@ -66,6 +73,7 @@ export interface RegisterData {
 export type ObraStatus = 'planejamento' | 'iniciada' | 'pausada' | 'concluida' | 'cancelada';
 
 export interface Obra extends BaseEntity {
+    tenant_id: string; // 🔑 CHAVE MULTI-TENANT
     nome: string;
     descricao?: string;
     endereco?: string;
@@ -109,6 +117,7 @@ export interface CreateObraData {
 export type PerfilNaObra = 'responsavel' | 'engenheiro' | 'mestre' | 'operador' | 'visitante';
 
 export interface EquipeObra extends BaseEntity {
+    tenant_id: string; // 🔑 CHAVE MULTI-TENANT
     obra_id: UUID;
     usuario_id: UUID;
     perfil_na_obra: PerfilNaObra;
@@ -134,6 +143,7 @@ export interface ConviteEquipe {
 export type StatusEtapa = 'pendente' | 'iniciada' | 'pausada' | 'concluida' | 'atrasada';
 
 export interface CronogramaEtapa extends BaseEntity {
+    tenant_id: string; // 🔑 CHAVE MULTI-TENANT
     obra_id: UUID;
     nome: string;
     descricao?: string;
@@ -165,6 +175,7 @@ export type StatusTarefa = 'pendente' | 'iniciada' | 'pausada' | 'concluida' | '
 export type PrioridadeTarefa = 'baixa' | 'media' | 'alta' | 'urgente';
 
 export interface Tarefa extends BaseEntity {
+    tenant_id: string; // 🔑 CHAVE MULTI-TENANT
     obra_id: UUID;
     etapa_id?: UUID;
     titulo: string;
@@ -209,6 +220,7 @@ export type Turno = 'manha' | 'tarde' | 'noite' | 'madrugada';
 export type StatusAprovacao = 'pendente' | 'aprovado' | 'rejeitado';
 
 export interface DiarioObra extends BaseEntity {
+    tenant_id: string; // 🔑 CHAVE MULTI-TENANT
     obra_id: UUID;
     data_registro: DateString;
     turno: Turno;
@@ -253,6 +265,7 @@ export interface CreateDiarioData {
 // ========================================
 
 export interface Material extends BaseEntity {
+    tenant_id: string; // 🔑 CHAVE MULTI-TENANT
     obra_id: UUID;
     nome: string;
     descricao?: string;
@@ -273,6 +286,7 @@ export interface Material extends BaseEntity {
 export type TipoMovimentacao = 'entrada' | 'saida' | 'ajuste' | 'transferencia';
 
 export interface MovimentacaoMaterial extends BaseEntity {
+    tenant_id: string; // 🔑 CHAVE MULTI-TENANT
     material_id: UUID;
     tipo_movimentacao: TipoMovimentacao;
     quantidade: number;
@@ -295,6 +309,7 @@ export interface MovimentacaoMaterial extends BaseEntity {
 export type TipoDocumento = 'projeto' | 'licenca' | 'contrato' | 'nota_fiscal' | 'foto' | 'video' | 'audio' | 'outro';
 
 export interface Documento extends BaseEntity {
+    tenant_id: string; // 🔑 CHAVE MULTI-TENANT
     obra_id: UUID;
     nome: string;
     descricao?: string;
@@ -340,6 +355,7 @@ export interface ItemChecklist {
 export type StatusQualidade = 'pendente' | 'em_verificacao' | 'aprovado' | 'reprovado' | 'corrigido';
 
 export interface ChecklistQualidade extends BaseEntity {
+    tenant_id: string; // 🔑 CHAVE MULTI-TENANT
     obra_id: UUID;
     etapa_id?: UUID;
     nome: string;
@@ -367,6 +383,7 @@ export interface ChecklistQualidade extends BaseEntity {
 export type CategoriaCusto = 'material' | 'mao_de_obra' | 'equipamento' | 'subcontratacao' | 'outros';
 
 export interface Custo extends BaseEntity {
+    tenant_id: string; // 🔑 CHAVE MULTI-TENANT
     obra_id: UUID;
     etapa_id?: UUID;
     categoria: CategoriaCusto;
@@ -504,4 +521,4 @@ export interface KPI {
 export * from './api';
 export * from './auth';
 export * from './navigation';
-export * from './obra';
+export * from './tenant';
