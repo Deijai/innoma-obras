@@ -1,39 +1,60 @@
 {
   "expo": {
-    "name": "innoma-obras",
+    "name": "Innoma Obras",
     "slug": "innoma-obras",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
-    "scheme": "innomaobras",
+    "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#2563EB"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.innoma.obras"
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#2563EB"
       },
-      "edgeToEdgeEnabled": true
+      "package": "com.innoma.obras",
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "CAMERA",
+        "WRITE_EXTERNAL_STORAGE",
+        "READ_EXTERNAL_STORAGE"
+      ]
     },
     "web": {
-      "bundler": "metro",
-      "output": "static",
-      "favicon": "./assets/images/favicon.png"
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro"
     },
+    "scheme": "innoma-obras",
     "plugins": [
       "expo-router",
+      "expo-secure-store",
+      "expo-sqlite",
       [
-        "expo-splash-screen",
+        "expo-image-picker",
         {
-          "image": "./assets/images/splash-icon.png",
-          "imageWidth": 200,
-          "resizeMode": "contain",
-          "backgroundColor": "#ffffff"
+          "photosPermission": "Innoma Obras precisa acessar suas fotos para documentar as obras.",
+          "cameraPermission": "Innoma Obras precisa acessar sua câmera para registrar o progresso das obras."
         }
-      ]
+      ],
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Innoma Obras precisa acessar sua localização para registrar onde as atividades foram realizadas."
+        }
+      ],
+      "expo-font"
     ],
     "experiments": {
       "typedRoutes": true

@@ -4,7 +4,34 @@
     "strict": true,
     "paths": {
       "@/*": [
-        "./*"
+        "./src/*"
+      ],
+      "@/components/*": [
+        "./src/components/*"
+      ],
+      "@/services/*": [
+        "./src/services/*"
+      ],
+      "@/store/*": [
+        "./src/store/*"
+      ],
+      "@/hooks/*": [
+        "./src/hooks/*"
+      ],
+      "@/contexts/*": [
+        "./src/contexts/*"
+      ],
+      "@/constants/*": [
+        "./src/constants/*"
+      ],
+      "@/types/*": [
+        "./src/types/*"
+      ],
+      "@/styles/*": [
+        "./src/styles/*"
+      ],
+      "@/assets/*": [
+        "./assets/*"
       ]
     }
   },
