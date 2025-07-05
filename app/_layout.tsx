@@ -1,3 +1,4 @@
+// app/_layout.tsx
 import { useFonts } from 'expo-font';
 import { SplashScreen, Stack } from 'expo-router';
 import React, { useEffect } from 'react';
@@ -7,23 +8,25 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 // Contexts
-import { AuthProvider } from '@/contexts/AuthContext';
-import { NetworkProvider } from '@/contexts/NetworkContext';
-import { ThemeProvider } from '@/contexts/ThemeContext';
+import { AuthProvider, NetworkProvider, ThemeProvider } from '@/contexts';
 
 // Services
 import { initializeDatabase } from '@/services/database/sqlite';
-//import { initializeNotifications } from '@/services/notifications';
+import { NetworkService } from '@/services/network/NetworkService';
+
+// Auth Middleware
+import { AuthGuard } from '@/middleware/AuthGuard';
 
 // Prevent the splash screen from auto-hiding
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
     const [fontsLoaded] = useFonts({
+        'Space-Mono': require('@/assets/fonts/SpaceMono-Regular.ttf'),
+        // Adicionar fonts Inter quando disponíveis
         // 'Inter-Regular': require('@/assets/fonts/Inter-Regular.ttf'),
         // 'Inter-Medium': require('@/assets/fonts/Inter-Medium.ttf'),
         // 'Inter-Bold': require('@/assets/fonts/Inter-Bold.ttf'),
-        'Space-Mono': require('@/assets/fonts/SpaceMono-Regular.ttf'),
     });
 
     useEffect(() => {
@@ -38,20 +41,24 @@ export default function RootLayout() {
 
     const initializeApp = async () => {
         try {
-            // Inicializar banco de dados
-            await initializeDatabase();
+            console.log('🚀 Inicializando Innoma Obras...');
 
-            // Inicializar notificações
-            //await initializeNotifications();
+            // Inicializar serviços essenciais
+            await Promise.all([
+                initializeDatabase(),
+                NetworkService.initialize(),
+            ]);
 
-            console.log('App inicializado com sucesso');
+            console.log('✅ App inicializado com sucesso');
         } catch (error) {
-            console.error('Erro ao inicializar app:', error);
+            console.error('❌ Erro ao inicializar app:', error);
+            // Não bloquear a app por erro de banco
+            console.log('⚠️ Continuando sem banco de dados...');
         }
     };
 
     if (!fontsLoaded) {
-        return null;
+        return null; // Splash screen continue exibido
     }
 
     return (
@@ -60,55 +67,65 @@ export default function RootLayout() {
                 <NetworkProvider>
                     <ThemeProvider>
                         <AuthProvider>
-                            <Stack
-                                screenOptions={{
-                                    headerShown: false,
-                                    animation: Platform.OS === 'ios' ? 'slide_from_right' : 'fade',
-                                }}
-                            >
-                                <Stack.Screen
-                                    name="(auth)"
-                                    options={{
+                            <AuthGuard>
+                                <Stack
+                                    screenOptions={{
                                         headerShown: false,
-                                        presentation: 'modal',
+                                        animation: Platform.OS === 'ios' ? 'slide_from_right' : 'fade',
+                                        gestureEnabled: true,
                                     }}
-                                />
-                                <Stack.Screen
-                                    name="(tabs)"
-                                    options={{
-                                        headerShown: false,
-                                    }}
-                                />
-                                <Stack.Screen
-                                    name="obra"
-                                    options={{
-                                        headerShown: false,
-                                        presentation: 'card',
-                                    }}
-                                />
-                                <Stack.Screen
-                                    name="modal"
-                                    options={{
-                                        headerShown: false,
-                                        presentation: 'transparentModal',
-                                        animation: 'fade',
-                                    }}
-                                />
-                            </Stack>
+                                >
+                                    {/* Rotas de Autenticação */}
+                                    <Stack.Screen
+                                        name="(auth)"
+                                        options={{
+                                            headerShown: false,
+                                            presentation: 'modal',
+                                            gestureEnabled: false,
+                                        }}
+                                    />
 
-                            {/* Toast Messages */}
-                            <FlashMessage
-                                position="top"
-                                floating
-                                titleStyle={{
-                                    fontFamily: 'Inter-Medium',
-                                    fontSize: 16,
-                                }}
-                                textStyle={{
-                                    fontFamily: 'Inter-Regular',
-                                    fontSize: 14,
-                                }}
-                            />
+                                    {/* Aplicação Principal */}
+                                    <Stack.Screen
+                                        name="(tabs)"
+                                        options={{
+                                            headerShown: false,
+                                            gestureEnabled: false,
+                                        }}
+                                    />
+
+                                    {/* 404 - Página não encontrada */}
+                                    <Stack.Screen
+                                        name="+not-found"
+                                        options={{
+                                            title: 'Página não encontrada',
+                                            headerShown: true,
+                                            presentation: 'modal',
+                                        }}
+                                    />
+                                </Stack>
+
+                                {/* Toast Messages Globais */}
+                                <FlashMessage
+                                    position="top"
+                                    floating
+                                    duration={4000}
+                                    titleStyle={{
+                                        fontFamily: 'Inter-Medium',
+                                        fontSize: 16,
+                                        fontWeight: '600',
+                                    }}
+                                    textStyle={{
+                                        fontFamily: 'Inter-Regular',
+                                        fontSize: 14,
+                                    }}
+                                    style={{
+                                        borderRadius: 12,
+                                        marginHorizontal: 16,
+                                        marginTop: 8,
+                                    }}
+                                />
+                            </AuthGuard>
                         </AuthProvider>
                     </ThemeProvider>
                 </NetworkProvider>
