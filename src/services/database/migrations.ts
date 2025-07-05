@@ -1,16 +1,16 @@
 export interface Migration {
-    version: number;
-    name: string;
-    sql: string[];
+  version: number;
+  name: string;
+  sql: string[];
 }
 
 export const migrations: Migration[] = [
-    {
-        version: 1,
-        name: 'Estrutura inicial do banco',
-        sql: [
-            // Tabela de usuários
-            `CREATE TABLE usuarios (
+  {
+    version: 1,
+    name: 'Estrutura inicial do banco',
+    sql: [
+      // Tabela de usuários
+      `CREATE TABLE IF NOT EXISTS usuarios (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         uuid TEXT UNIQUE NOT NULL,
         nome TEXT NOT NULL,
@@ -25,8 +25,8 @@ export const migrations: Migration[] = [
         is_active INTEGER DEFAULT 1
       )`,
 
-            // Tabela de obras
-            `CREATE TABLE obras (
+      // Tabela de obras
+      `CREATE TABLE IF NOT EXISTS obras (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         uuid TEXT UNIQUE NOT NULL,
         nome TEXT NOT NULL,
@@ -53,8 +53,8 @@ export const migrations: Migration[] = [
         FOREIGN KEY (responsavel_id) REFERENCES usuarios(uuid)
       )`,
 
-            // Tabela de equipe por obra
-            `CREATE TABLE equipe_obras (
+      // Tabela de equipe por obra
+      `CREATE TABLE IF NOT EXISTS equipe_obras (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         obra_id TEXT NOT NULL,
         usuario_id TEXT NOT NULL,
@@ -70,8 +70,8 @@ export const migrations: Migration[] = [
         UNIQUE(obra_id, usuario_id)
       )`,
 
-            // Tabela de cronograma/etapas
-            `CREATE TABLE cronograma (
+      // Tabela de cronograma/etapas
+      `CREATE TABLE IF NOT EXISTS cronograma (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         uuid TEXT UNIQUE NOT NULL,
         obra_id TEXT NOT NULL,
@@ -98,8 +98,8 @@ export const migrations: Migration[] = [
         FOREIGN KEY (etapa_pai_id) REFERENCES cronograma(uuid)
       )`,
 
-            // Tabela de tarefas
-            `CREATE TABLE tarefas (
+      // Tabela de tarefas
+      `CREATE TABLE IF NOT EXISTS tarefas (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         uuid TEXT UNIQUE NOT NULL,
         obra_id TEXT NOT NULL,
@@ -130,8 +130,8 @@ export const migrations: Migration[] = [
         FOREIGN KEY (responsavel_id) REFERENCES usuarios(uuid)
       )`,
 
-            // Tabela de diário de obra
-            `CREATE TABLE diarios (
+      // Tabela de diário de obra
+      `CREATE TABLE IF NOT EXISTS diarios (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         uuid TEXT UNIQUE NOT NULL,
         obra_id TEXT NOT NULL,
@@ -163,8 +163,8 @@ export const migrations: Migration[] = [
         FOREIGN KEY (aprovado_por) REFERENCES usuarios(uuid)
       )`,
 
-            // Tabela de materiais
-            `CREATE TABLE materiais (
+      // Tabela de materiais
+      `CREATE TABLE IF NOT EXISTS materiais (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         uuid TEXT UNIQUE NOT NULL,
         obra_id TEXT NOT NULL,
@@ -185,8 +185,8 @@ export const migrations: Migration[] = [
         FOREIGN KEY (obra_id) REFERENCES obras(uuid)
       )`,
 
-            // Tabela de movimentações de materiais
-            `CREATE TABLE movimentacoes_materiais (
+      // Tabela de movimentações de materiais
+      `CREATE TABLE IF NOT EXISTS movimentacoes_materiais (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         uuid TEXT UNIQUE NOT NULL,
         material_id TEXT NOT NULL,
@@ -205,8 +205,8 @@ export const migrations: Migration[] = [
         FOREIGN KEY (responsavel_id) REFERENCES usuarios(uuid)
       )`,
 
-            // Tabela de documentos
-            `CREATE TABLE documentos (
+      // Tabela de documentos
+      `CREATE TABLE IF NOT EXISTS documentos (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         uuid TEXT UNIQUE NOT NULL,
         obra_id TEXT NOT NULL,
@@ -236,8 +236,8 @@ export const migrations: Migration[] = [
         FOREIGN KEY (documento_pai_id) REFERENCES documentos(uuid)
       )`,
 
-            // Tabela de controle de qualidade/checklists
-            `CREATE TABLE checklist_qualidade (
+      // Tabela de controle de qualidade/checklists
+      `CREATE TABLE IF NOT EXISTS checklist_qualidade (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         uuid TEXT UNIQUE NOT NULL,
         obra_id TEXT NOT NULL,
@@ -263,8 +263,8 @@ export const migrations: Migration[] = [
         FOREIGN KEY (responsavel_aprovacao) REFERENCES usuarios(uuid)
       )`,
 
-            // Tabela de custos
-            `CREATE TABLE custos (
+      // Tabela de custos
+      `CREATE TABLE IF NOT EXISTS custos (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         uuid TEXT UNIQUE NOT NULL,
         obra_id TEXT NOT NULL,
@@ -293,8 +293,8 @@ export const migrations: Migration[] = [
         FOREIGN KEY (aprovado_por) REFERENCES usuarios(uuid)
       )`,
 
-            // Tabela de sincronização
-            `CREATE TABLE sync_queue (
+      // Tabela de sincronização
+      `CREATE TABLE IF NOT EXISTS sync_queue (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         table_name TEXT NOT NULL,
         record_uuid TEXT NOT NULL,
@@ -306,21 +306,21 @@ export const migrations: Migration[] = [
         last_error TEXT
       )`,
 
-            // Índices para performance
-            `CREATE INDEX idx_obras_status ON obras(status)`,
-            `CREATE INDEX idx_obras_responsavel ON obras(responsavel_id)`,
-            `CREATE INDEX idx_tarefas_obra ON tarefas(obra_id)`,
-            `CREATE INDEX idx_tarefas_responsavel ON tarefas(responsavel_id)`,
-            `CREATE INDEX idx_tarefas_status ON tarefas(status)`,
-            `CREATE INDEX idx_diarios_obra_data ON diarios(obra_id, data_registro)`,
-            `CREATE INDEX idx_equipe_obra ON equipe_obras(obra_id)`,
-            `CREATE INDEX idx_materiais_obra ON materiais(obra_id)`,
-            `CREATE INDEX idx_documentos_obra ON documentos(obra_id)`,
-            `CREATE INDEX idx_cronograma_obra ON cronograma(obra_id)`,
-            `CREATE INDEX idx_custos_obra ON custos(obra_id)`,
-            `CREATE INDEX idx_sync_queue_synced ON sync_queue(synced_at)`,
-        ],
-    },
+      // Índices para performance (usando CREATE INDEX IF NOT EXISTS)
+      `CREATE INDEX IF NOT EXISTS idx_obras_status ON obras(status)`,
+      `CREATE INDEX IF NOT EXISTS idx_obras_responsavel ON obras(responsavel_id)`,
+      `CREATE INDEX IF NOT EXISTS idx_tarefas_obra ON tarefas(obra_id)`,
+      `CREATE INDEX IF NOT EXISTS idx_tarefas_responsavel ON tarefas(responsavel_id)`,
+      `CREATE INDEX IF NOT EXISTS idx_tarefas_status ON tarefas(status)`,
+      `CREATE INDEX IF NOT EXISTS idx_diarios_obra_data ON diarios(obra_id, data_registro)`,
+      `CREATE INDEX IF NOT EXISTS idx_equipe_obra ON equipe_obras(obra_id)`,
+      `CREATE INDEX IF NOT EXISTS idx_materiais_obra ON materiais(obra_id)`,
+      `CREATE INDEX IF NOT EXISTS idx_documentos_obra ON documentos(obra_id)`,
+      `CREATE INDEX IF NOT EXISTS idx_cronograma_obra ON cronograma(obra_id)`,
+      `CREATE INDEX IF NOT EXISTS idx_custos_obra ON custos(obra_id)`,
+      `CREATE INDEX IF NOT EXISTS idx_sync_queue_synced ON sync_queue(synced_at)`,
+    ],
+  },
 ];
 
 export default migrations;

@@ -14,8 +14,11 @@ export async function initializeDatabase(): Promise<void> {
     try {
         console.log('🚀 Inicializando banco de dados...');
 
-        // CORREÇÃO: Usar a nova API do Expo SQLite
+        // Abrir/criar banco de dados
         database = await SQLite.openDatabaseAsync(DATABASE_NAME);
+
+        // Verificar se o banco está funcionando
+        await testDatabaseConnection();
 
         // Executar migrações
         await runMigrations();
@@ -23,6 +26,23 @@ export async function initializeDatabase(): Promise<void> {
         console.log('✅ Banco de dados inicializado com sucesso');
     } catch (error) {
         console.error('❌ Erro ao inicializar banco de dados:', error);
+        throw error;
+    }
+}
+
+/**
+ * Testa a conexão com o banco de dados
+ */
+async function testDatabaseConnection(): Promise<void> {
+    try {
+        const db = getDatabase();
+        const result: any = await db.getAllAsync('SELECT 1 as test');
+        if (result.length === 0 || result[0].test !== 1) {
+            throw new Error('Teste de conexão com banco falhou');
+        }
+        console.log('🔌 Conexão com banco de dados verificada');
+    } catch (error) {
+        console.error('❌ Erro na conexão com banco:', error);
         throw error;
     }
 }
@@ -46,14 +66,18 @@ export async function executeQuery(
 ): Promise<SQLite.SQLiteRunResult> {
     try {
         const db = getDatabase();
-
-        // CORREÇÃO: Usar a nova API
         const result = await db.runAsync(sql, params);
-        console.log(`📝 Query executada: ${sql}`, { params, result });
-
+        console.log(`📝 Query executada: ${sql.substring(0, 50)}...`, {
+            params: params.length > 0 ? params : 'sem parâmetros',
+            changes: result.changes
+        });
         return result;
     } catch (error) {
-        console.error('❌ Erro na query SQL:', { sql, params, error });
+        console.error('❌ Erro na query SQL:', {
+            sql: sql.substring(0, 100),
+            params,
+            error: error instanceof Error ? error.message : error
+        });
         throw error;
     }
 }
@@ -67,14 +91,18 @@ export async function executeSelectQuery(
 ): Promise<any[]> {
     try {
         const db = getDatabase();
-
-        // CORREÇÃO: Usar getAllAsync para SELECT
         const result = await db.getAllAsync(sql, params);
-        console.log(`🔍 Select executado: ${sql}`, { params, rows: result.length });
-
+        console.log(`🔍 Select executado: ${sql.substring(0, 50)}...`, {
+            params: params.length > 0 ? params : 'sem parâmetros',
+            rows: result.length
+        });
         return result;
     } catch (error) {
-        console.error('❌ Erro na query SELECT:', { sql, params, error });
+        console.error('❌ Erro na query SELECT:', {
+            sql: sql.substring(0, 100),
+            params,
+            error: error instanceof Error ? error.message : error
+        });
         throw error;
     }
 }
@@ -89,7 +117,6 @@ export async function executeTransaction(
         const db = getDatabase();
         const results: any[] = [];
 
-        // CORREÇÃO: Usar transação da nova API
         await db.withTransactionAsync(async () => {
             for (const query of queries) {
                 const result = await db.runAsync(query.sql, query.params || []);
@@ -106,7 +133,7 @@ export async function executeTransaction(
 }
 
 /**
- * Executa as migrações do banco de dados
+ * Executa as migrações do banco de dados de forma segura
  */
 async function runMigrations(): Promise<void> {
     try {
@@ -126,30 +153,88 @@ async function runMigrations(): Promise<void> {
         );
 
         const currentVersion = versionResult[0]?.current_version || 0;
+        console.log(`📊 Versão atual do schema: ${currentVersion}`);
 
         // Executar migrações pendentes
         for (const migration of migrations) {
             if (migration.version > currentVersion) {
                 console.log(`📝 Aplicando migração ${migration.version}: ${migration.name}`);
 
-                // Executar todas as queries da migração em uma transação
-                const queries = migration.sql.map(sql => ({ sql }));
-                await executeTransaction(queries);
+                try {
+                    // Executar cada SQL da migração de forma individual
+                    for (let i = 0; i < migration.sql.length; i++) {
+                        const sql = migration.sql[i];
+                        try {
+                            await executeQuery(sql);
+                            console.log(`   ✅ SQL ${i + 1}/${migration.sql.length} executado`);
+                        } catch (sqlError) {
+                            // Se for erro de "already exists", apenas avisar e continuar
+                            if (sqlError instanceof Error &&
+                                (sqlError.message.includes('already exists') ||
+                                    sqlError.message.includes('duplicate column name'))) {
+                                console.log(`   ⚠️ SQL ${i + 1}: ${sqlError.message} (ignorado)`);
+                                continue;
+                            }
+                            throw sqlError;
+                        }
+                    }
 
-                // Registrar migração aplicada
-                await executeQuery(
-                    'INSERT INTO schema_versions (version) VALUES (?)',
-                    [migration.version]
-                );
+                    // Registrar migração aplicada
+                    await executeQuery(
+                        'INSERT INTO schema_versions (version) VALUES (?)',
+                        [migration.version]
+                    );
 
-                console.log(`✅ Migração ${migration.version} aplicada com sucesso`);
+                    console.log(`✅ Migração ${migration.version} aplicada com sucesso`);
+                } catch (migrationError) {
+                    console.error(`❌ Erro na migração ${migration.version}:`, migrationError);
+
+                    // Se a migração já foi parcialmente aplicada, tentar registrá-la
+                    try {
+                        await executeQuery(
+                            'INSERT OR IGNORE INTO schema_versions (version) VALUES (?)',
+                            [migration.version]
+                        );
+                        console.log(`⚠️ Migração ${migration.version} marcada como aplicada após erro`);
+                    } catch (registerError) {
+                        console.error(`❌ Erro ao registrar migração ${migration.version}:`, registerError);
+                    }
+
+                    // Não parar o processo, apenas reportar
+                    console.log(`⚠️ Continuando com outras migrações...`);
+                }
+            } else {
+                console.log(`⏭️ Migração ${migration.version} já aplicada`);
             }
         }
 
-        console.log('✅ Todas as migrações foram aplicadas');
+        // Verificar integridade das tabelas principais
+        await verifyDatabaseIntegrity();
+
+        console.log('✅ Todas as migrações foram processadas');
     } catch (error) {
         console.error('❌ Erro ao executar migrações:', error);
         throw error;
+    }
+}
+
+/**
+ * Verifica a integridade das tabelas principais
+ */
+async function verifyDatabaseIntegrity(): Promise<void> {
+    try {
+        const essentialTables = ['usuarios', 'obras', 'tarefas', 'diarios', 'sync_queue'];
+
+        for (const tableName of essentialTables) {
+            const exists = await tableExists(tableName);
+            if (exists) {
+                console.log(`✅ Tabela ${tableName} verificada`);
+            } else {
+                console.warn(`⚠️ Tabela ${tableName} não encontrada`);
+            }
+        }
+    } catch (error) {
+        console.error('❌ Erro na verificação de integridade:', error);
     }
 }
 
@@ -166,10 +251,22 @@ export async function clearDatabase(): Promise<void> {
             'checklist_qualidade', 'cronograma', 'custos', 'sync_queue'
         ];
 
-        const queries = tables.map(table => ({ sql: `DELETE FROM ${table}` }));
-        queries.push({ sql: 'DELETE FROM schema_versions' });
+        for (const table of tables) {
+            try {
+                await executeQuery(`DELETE FROM ${table}`);
+                console.log(`🗑️ Tabela ${table} limpa`);
+            } catch (error) {
+                console.warn(`⚠️ Erro ao limpar tabela ${table}:`, error);
+            }
+        }
 
-        await executeTransaction(queries);
+        // Limpar versões de schema para forçar re-execução das migrações
+        try {
+            await executeQuery('DELETE FROM schema_versions');
+            console.log('🗑️ Versões de schema limpas');
+        } catch (error) {
+            console.warn('⚠️ Erro ao limpar schema_versions:', error);
+        }
 
         console.log('✅ Banco de dados limpo com sucesso');
     } catch (error) {
@@ -207,7 +304,12 @@ export async function exportData(): Promise<any> {
         ];
 
         for (const table of tables) {
-            data[table] = await executeSelectQuery(`SELECT * FROM ${table}`);
+            try {
+                data[table] = await executeSelectQuery(`SELECT * FROM ${table}`);
+            } catch (error) {
+                console.warn(`⚠️ Erro ao exportar tabela ${table}:`, error);
+                data[table] = [];
+            }
         }
 
         return data;
@@ -238,6 +340,11 @@ export async function tableExists(tableName: string): Promise<boolean> {
  */
 export async function countRecords(tableName: string): Promise<number> {
     try {
+        const exists = await tableExists(tableName);
+        if (!exists) {
+            return 0;
+        }
+
         const result = await executeSelectQuery(`SELECT COUNT(*) as count FROM ${tableName}`);
         return result[0]?.count || 0;
     } catch (error) {
@@ -258,5 +365,28 @@ export async function listTables(): Promise<string[]> {
     } catch (error) {
         console.error('❌ Erro ao listar tabelas:', error);
         return [];
+    }
+}
+
+/**
+ * Utilitário para debug - obter informações do banco
+ */
+export async function getDatabaseInfo(): Promise<any> {
+    try {
+        const tables = await listTables();
+        const info: any = {
+            tables: {},
+            totalTables: tables.length,
+        };
+
+        for (const table of tables) {
+            const count = await countRecords(table);
+            info.tables[table] = count;
+        }
+
+        return info;
+    } catch (error) {
+        console.error('❌ Erro ao obter informações do banco:', error);
+        return { error: error instanceof Error ? error.message : 'Erro desconhecido' };
     }
 }
