@@ -1,7 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as Haptics from 'expo-haptics';
-import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import React, { useRef } from 'react';
 import { Controller, useForm } from 'react-hook-form';
@@ -20,7 +19,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as yup from 'yup';
 
 import { Button } from '@/components/common/Button';
-import { Card } from '@/components/common/Card';
 import { Input } from '@/components/common/Input';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -38,7 +36,7 @@ const registerSchema = yup.object().shape({
         .required('Email é obrigatório'),
     telefone: yup
         .string()
-        .matches(/^\(\d{2}\)\s\d{4,5}-\d{4}$/, 'Telefone inválido')
+        .matches(/^\(\d{2}\)\s\d{4,5}-\d{4}$/, 'Telefone inválido (ex: (11) 99999-9999)')
         .optional(),
     empresa: yup
         .string()
@@ -52,6 +50,10 @@ const registerSchema = yup.object().shape({
         .string()
         .oneOf([yup.ref('password')], 'Senhas não coincidem')
         .required('Confirmação de senha é obrigatória'),
+    acceptTerms: yup
+        .boolean()
+        .oneOf([true], 'Você deve aceitar os termos e condições')
+        .required(),
 });
 
 export default function RegisterScreen() {
@@ -59,17 +61,17 @@ export default function RegisterScreen() {
     const { register, isLoading, error } = useAuth();
     const insets = useSafeAreaInsets();
 
+    // Animações simples
     const fadeAnim = useRef(new Animated.Value(0)).current;
-    const slideAnim = useRef(new Animated.Value(30)).current;
 
     const {
         control,
         handleSubmit,
         formState: { errors, isValid },
-        watch,
-    } = useForm<RegisterData>({
+    } = useForm<RegisterData & { acceptTerms: boolean }>({
         resolver: yupResolver(registerSchema) as any,
-        mode: 'onChange',
+        mode: 'onBlur',
+        reValidateMode: 'onBlur',
         defaultValues: {
             nome: '',
             email: '',
@@ -77,29 +79,25 @@ export default function RegisterScreen() {
             empresa: '',
             password: '',
             confirmPassword: '',
+            acceptTerms: false,
         },
     });
 
-    // Animações de entrada
+    // Animação de entrada suave
     React.useEffect(() => {
-        Animated.parallel([
-            Animated.timing(fadeAnim, {
-                toValue: 1,
-                duration: 800,
-                useNativeDriver: true,
-            }),
-            Animated.timing(slideAnim, {
-                toValue: 0,
-                duration: 600,
-                useNativeDriver: true,
-            }),
-        ]).start();
+        Animated.timing(fadeAnim, {
+            toValue: 1,
+            duration: 600,
+            useNativeDriver: true,
+        }).start();
     }, []);
 
-    const onSubmit = async (data: RegisterData) => {
+    const onSubmit = async (data: RegisterData & { acceptTerms: boolean }) => {
         try {
             await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-            await register(data);
+
+            const { acceptTerms, ...registerData } = data;
+            await register(registerData);
 
             await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
@@ -124,10 +122,7 @@ export default function RegisterScreen() {
     };
 
     const formatPhone = (value: string) => {
-        // Remove tudo que não é número
         const numbers = value.replace(/\D/g, '');
-
-        // Aplica a máscara (XX) XXXXX-XXXX ou (XX) XXXX-XXXX
         if (numbers.length <= 10) {
             return numbers.replace(/(\d{2})(\d{4})(\d{0,4})/, '($1) $2-$3').replace(/-$/, '');
         } else {
@@ -136,34 +131,30 @@ export default function RegisterScreen() {
     };
 
     return (
-        <KeyboardAvoidingView
-            style={[styles.container, { backgroundColor: theme.colors.background }]}
-            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        >
-            <LinearGradient
-                colors={[theme.colors.secondary, theme.colors.secondaryDark] as const}
-                style={StyleSheet.absoluteFill}
-            />
-
-            <ScrollView
-                style={styles.scrollView}
-                contentContainerStyle={[
-                    styles.scrollContent,
-                    { paddingTop: insets.top + 20, paddingBottom: insets.bottom + 20 }
-                ]}
-                showsVerticalScrollIndicator={false}
+        <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+            <KeyboardAvoidingView
+                style={styles.keyboardAvoid}
+                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
             >
-                <Animated.View
-                    style={[
-                        styles.content,
+                <ScrollView
+                    style={styles.scrollView}
+                    contentContainerStyle={[
+                        styles.scrollContent,
                         {
-                            opacity: fadeAnim,
-                            transform: [{ translateY: slideAnim }],
-                        },
+                            paddingTop: insets.top + 40,
+                            paddingBottom: insets.bottom + 40
+                        }
                     ]}
+                    showsVerticalScrollIndicator={false}
+                    keyboardShouldPersistTaps="handled"
                 >
-                    {/* Header */}
-                    <View style={styles.header}>
+                    <Animated.View
+                        style={[
+                            styles.content,
+                            { opacity: fadeAnim }
+                        ]}
+                    >
+                        {/* Back Button */}
                         <Pressable
                             style={styles.backButton}
                             onPress={handleBackToLogin}
@@ -171,39 +162,21 @@ export default function RegisterScreen() {
                             <Ionicons
                                 name="arrow-back"
                                 size={24}
-                                color={theme.colors.white}
+                                color={theme.colors.text}
                             />
                         </Pressable>
 
-                        <View style={styles.headerContent}>
-                            <View style={styles.logoContainer}>
-                                <LinearGradient
-                                    colors={[theme.colors.white, theme.colors.gray100] as const}
-                                    style={styles.logoGradient}
-                                >
-                                    <Ionicons
-                                        name="person-add"
-                                        size={40}
-                                        color={theme.colors.secondary}
-                                    />
-                                </LinearGradient>
-                            </View>
-
-                            <Text style={[styles.title, { color: theme.colors.white }]}>
-                                Criar Conta
+                        {/* Header */}
+                        <View style={styles.header}>
+                            <Text style={[styles.title, { color: theme.colors.text }]}>
+                                Vamos criar sua conta
                             </Text>
-                            <Text style={[styles.subtitle, { color: theme.colors.white }]}>
-                                Junte-se à revolução na gestão de obras
+                            <Text style={[styles.subtitle, { color: theme.colors.textSecondary }]}>
+                                Olá usuário, você terá{'\n'}uma jornada incrível
                             </Text>
                         </View>
-                    </View>
 
-                    {/* Card de Cadastro */}
-                    <Card
-                        variant="elevated"
-                        padding="large"
-                        style={styles.registerCard}
-                    >
+                        {/* Form */}
                         <View style={styles.form}>
                             {/* Nome Input */}
                             <Controller
@@ -211,15 +184,14 @@ export default function RegisterScreen() {
                                 name="nome"
                                 render={({ field: { onChange, onBlur, value } }) => (
                                     <Input
-                                        label="Nome completo"
-                                        placeholder="Seu nome completo"
+                                        placeholder="Nome"
                                         value={value}
                                         onChangeText={onChange}
                                         onBlur={onBlur}
                                         error={errors.nome?.message}
-                                        leftIcon="person"
                                         autoCapitalize="words"
-                                        required
+                                        size="large"
+                                        containerStyle={styles.inputContainer}
                                     />
                                 )}
                             />
@@ -230,17 +202,16 @@ export default function RegisterScreen() {
                                 name="email"
                                 render={({ field: { onChange, onBlur, value } }) => (
                                     <Input
-                                        label="Email"
-                                        placeholder="seu@email.com"
+                                        placeholder="Email"
                                         value={value}
                                         onChangeText={onChange}
                                         onBlur={onBlur}
                                         error={errors.email?.message}
-                                        leftIcon="mail"
                                         keyboardType="email-address"
                                         autoCapitalize="none"
                                         autoComplete="email"
-                                        required
+                                        size="large"
+                                        containerStyle={styles.inputContainer}
                                     />
                                 )}
                             />
@@ -251,15 +222,15 @@ export default function RegisterScreen() {
                                 name="telefone"
                                 render={({ field: { onChange, onBlur, value } }) => (
                                     <Input
-                                        label="Telefone"
-                                        placeholder="(00) 00000-0000"
+                                        placeholder="Telefone"
                                         value={value}
                                         onChangeText={(text) => onChange(formatPhone(text))}
                                         onBlur={onBlur}
                                         error={errors.telefone?.message}
-                                        leftIcon="call"
                                         keyboardType="phone-pad"
                                         maxLength={15}
+                                        size="large"
+                                        containerStyle={styles.inputContainer}
                                     />
                                 )}
                             />
@@ -270,14 +241,14 @@ export default function RegisterScreen() {
                                 name="empresa"
                                 render={({ field: { onChange, onBlur, value } }) => (
                                     <Input
-                                        label="Empresa"
-                                        placeholder="Nome da sua empresa"
+                                        placeholder="Empresa (opcional)"
                                         value={value}
                                         onChangeText={onChange}
                                         onBlur={onBlur}
                                         error={errors.empresa?.message}
-                                        leftIcon="business"
                                         autoCapitalize="words"
+                                        size="large"
+                                        containerStyle={styles.inputContainer}
                                     />
                                 )}
                             />
@@ -288,15 +259,16 @@ export default function RegisterScreen() {
                                 name="password"
                                 render={({ field: { onChange, onBlur, value } }) => (
                                     <Input
-                                        label="Senha"
-                                        placeholder="••••••••"
+                                        placeholder="Senha"
                                         value={value}
                                         onChangeText={onChange}
                                         onBlur={onBlur}
                                         error={errors.password?.message}
-                                        leftIcon="lock-closed"
                                         isPassword
-                                        required
+                                        size="large"
+                                        containerStyle={styles.inputContainer}
+                                        autoComplete="new-password"
+                                        textContentType="newPassword"
                                     />
                                 )}
                             />
@@ -307,16 +279,62 @@ export default function RegisterScreen() {
                                 name="confirmPassword"
                                 render={({ field: { onChange, onBlur, value } }) => (
                                     <Input
-                                        label="Confirmar senha"
-                                        placeholder="••••••••"
+                                        placeholder="Confirmar senha"
                                         value={value}
                                         onChangeText={onChange}
                                         onBlur={onBlur}
                                         error={errors.confirmPassword?.message}
-                                        leftIcon="lock-closed"
                                         isPassword
-                                        required
+                                        size="large"
+                                        containerStyle={styles.inputContainer}
+                                        autoComplete="new-password"
+                                        textContentType="newPassword"
                                     />
+                                )}
+                            />
+
+                            {/* Terms Checkbox */}
+                            <Controller
+                                control={control}
+                                name="acceptTerms"
+                                render={({ field: { onChange, value } }) => (
+                                    <View style={styles.termsContainer}>
+                                        <Pressable
+                                            style={styles.checkboxContainer}
+                                            onPress={() => onChange(!value)}
+                                        >
+                                            <View style={[
+                                                styles.checkbox,
+                                                {
+                                                    borderColor: value ? theme.colors.primary : theme.colors.border,
+                                                    backgroundColor: value ? theme.colors.primary : 'transparent',
+                                                }
+                                            ]}>
+                                                {value && (
+                                                    <Ionicons
+                                                        name="checkmark"
+                                                        size={14}
+                                                        color={theme.colors.white}
+                                                    />
+                                                )}
+                                            </View>
+                                            <Text style={[styles.termsText, { color: theme.colors.textSecondary }]}>
+                                                Eu concordo com os{' '}
+                                                <Text style={[styles.termsLink, { color: theme.colors.primary }]}>
+                                                    Termos de Serviço
+                                                </Text>
+                                                {' '}e{' '}
+                                                <Text style={[styles.termsLink, { color: theme.colors.primary }]}>
+                                                    Política de Privacidade
+                                                </Text>
+                                            </Text>
+                                        </Pressable>
+                                        {errors.acceptTerms && (
+                                            <Text style={[styles.errorText, { color: theme.colors.error }]}>
+                                                {errors.acceptTerms.message}
+                                            </Text>
+                                        )}
+                                    </View>
                                 )}
                             />
 
@@ -334,53 +352,41 @@ export default function RegisterScreen() {
                                 </View>
                             )}
 
-                            {/* Terms */}
-                            <View style={styles.termsContainer}>
-                                <Text style={[styles.termsText, { color: theme.colors.textSecondary }]}>
-                                    Ao criar uma conta, você concorda com nossos{' '}
-                                    <Text style={[styles.termsLink, { color: theme.colors.secondary }]}>
-                                        Termos de Uso
-                                    </Text>
-                                    {' e '}
-                                    <Text style={[styles.termsLink, { color: theme.colors.secondary }]}>
-                                        Política de Privacidade
-                                    </Text>
-                                </Text>
-                            </View>
-
-                            {/* Register Button */}
+                            {/* Sign Up Button */}
                             <Button
-                                title="Criar Conta"
+                                title="Cadastrar"
                                 onPress={handleSubmit(onSubmit)}
                                 loading={isLoading}
                                 disabled={!isValid || isLoading}
-                                variant="secondary"
-                                gradient
+                                variant="primary"
                                 size="large"
-                                style={styles.registerButton}
+                                style={styles.signUpButton}
                             />
                         </View>
-                    </Card>
 
-                    {/* Back to Login */}
-                    <View style={styles.footer}>
-                        <Text style={[styles.footerText, { color: theme.colors.white }]}>
-                            Já tem uma conta?{' '}
-                        </Text>
-                        <Pressable onPress={handleBackToLogin}>
-                            <Text style={[styles.footerLink, { color: theme.colors.white }]}>
-                                Fazer login
+                        {/* Footer */}
+                        <View style={styles.footer}>
+                            <Text style={[styles.footerText, { color: theme.colors.textSecondary }]}>
+                                Já tem uma conta?{' '}
                             </Text>
-                        </Pressable>
-                    </View>
-                </Animated.View>
-            </ScrollView>
-        </KeyboardAvoidingView>
+                            <Pressable onPress={handleBackToLogin}>
+                                <Text style={[styles.footerLink, { color: theme.colors.primary }]}>
+                                    Entrar
+                                </Text>
+                            </Pressable>
+                        </View>
+                    </Animated.View>
+                </ScrollView>
+            </KeyboardAvoidingView>
+        </View>
     );
 }
 
 const styles = StyleSheet.create({
     container: {
+        flex: 1,
+    },
+    keyboardAvoid: {
         flex: 1,
     },
     scrollView: {
@@ -392,97 +398,103 @@ const styles = StyleSheet.create({
     },
     content: {
         flex: 1,
-        justifyContent: 'center',
-        minHeight: '100%',
+        gap: 32,
     },
-    header: {
-        marginBottom: 32,
-    },
+
+    // Back Button
     backButton: {
         alignSelf: 'flex-start',
         padding: 8,
-        marginBottom: 20,
-        borderRadius: 8,
-        backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    },
-    headerContent: {
-        alignItems: 'center',
-    },
-    logoContainer: {
-        width: 70,
-        height: 70,
-        borderRadius: 16,
-        marginBottom: 16,
-        overflow: 'hidden',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.12,
-        shadowRadius: 8,
-        elevation: 8,
-    },
-    logoGradient: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    title: {
-        fontSize: 28,
-        fontWeight: 'bold',
-        fontFamily: 'Inter-Bold',
         marginBottom: 8,
     },
-    subtitle: {
-        fontSize: 16,
-        textAlign: 'center',
-        opacity: 0.9,
-        fontFamily: 'Inter-Regular',
-        lineHeight: 22,
+
+    // Header
+    header: {
+        alignItems: 'flex-start',
+        marginBottom: 8,
     },
-    registerCard: {
-        marginBottom: 24,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.12,
-        shadowRadius: 8,
-        elevation: 8,
-    },
-    form: {
-        gap: 4,
-    },
-    errorContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        padding: 12,
-        borderRadius: 8,
+    title: {
+        fontSize: 32,
+        fontWeight: 'bold',
+        fontFamily: 'Inter-Bold',
         marginBottom: 16,
-        gap: 8,
+        lineHeight: 40,
     },
-    errorText: {
-        fontSize: 14,
-        fontFamily: 'Inter-Medium',
-        flex: 1,
+    subtitle: {
+        fontSize: 18,
+        fontFamily: 'Inter-Regular',
+        lineHeight: 28,
     },
+
+    // Form
+    form: {
+        gap: 16,
+    },
+    inputContainer: {
+        marginBottom: 0,
+    },
+
+    // Terms
     termsContainer: {
-        marginBottom: 24,
         marginTop: 8,
     },
+    checkboxContainer: {
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+        gap: 12,
+    },
+    checkbox: {
+        width: 20,
+        height: 20,
+        borderRadius: 4,
+        borderWidth: 2,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginTop: 2,
+    },
     termsText: {
-        fontSize: 12,
+        fontSize: 14,
         fontFamily: 'Inter-Regular',
-        textAlign: 'center',
-        lineHeight: 18,
+        lineHeight: 20,
+        flex: 1,
     },
     termsLink: {
         fontWeight: '600',
         fontFamily: 'Inter-Medium',
     },
-    registerButton: {
-        marginBottom: 8,
+
+    // Error
+    errorContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        padding: 16,
+        borderRadius: 12,
+        gap: 12,
+        borderWidth: 1,
+        borderColor: 'rgba(239, 68, 68, 0.2)',
+        marginTop: 8,
     },
+    errorText: {
+        fontSize: 12,
+        fontFamily: 'Inter-Regular',
+        lineHeight: 16,
+        marginTop: 4,
+        marginLeft: 4,
+    },
+
+    // Sign Up Button
+    signUpButton: {
+        marginTop: 8,
+        borderRadius: 12,
+        height: 56,
+    },
+
+    // Footer
     footer: {
         flexDirection: 'row',
         justifyContent: 'center',
         alignItems: 'center',
+        flexWrap: 'wrap',
         marginTop: 16,
     },
     footerText: {
@@ -493,6 +505,5 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: '600',
         fontFamily: 'Inter-Medium',
-        textDecorationLine: 'underline',
     },
 });

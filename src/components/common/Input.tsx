@@ -2,7 +2,6 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
 import React, { forwardRef, useState } from 'react';
 import {
-    Animated,
     StyleSheet,
     Text,
     TextInput,
@@ -42,33 +41,21 @@ export const Input = forwardRef<TextInput, InputProps>(({
     style,
     onFocus,
     onBlur,
+    value,
     ...props
 }, ref) => {
     const { theme } = useTheme();
     const [isFocused, setIsFocused] = useState(false);
     const [isPasswordVisible, setIsPasswordVisible] = useState(false);
-    const [labelAnimation] = useState(new Animated.Value(props.value ? 1 : 0));
 
     const handleFocus = (event: any) => {
         setIsFocused(true);
-        animateLabel(1);
         onFocus?.(event);
     };
 
     const handleBlur = (event: any) => {
         setIsFocused(false);
-        if (!props.value) {
-            animateLabel(0);
-        }
         onBlur?.(event);
-    };
-
-    const animateLabel = (toValue: number) => {
-        Animated.timing(labelAnimation, {
-            toValue,
-            duration: 200,
-            useNativeDriver: false,
-        }).start();
     };
 
     const togglePasswordVisibility = () => {
@@ -83,63 +70,34 @@ export const Input = forwardRef<TextInput, InputProps>(({
 
     const getInputContainerStyle = () => [
         styles.inputContainer,
-        theme.sizes?.input?.[size] || { height: 44 },
+        theme.sizes?.input?.[size] || { height: size === 'large' ? 56 : size === 'small' ? 40 : 48 },
         {
             borderColor: error
-                ? theme.colors.inputError
+                ? theme.colors.error
                 : isFocused
-                    ? theme.colors.inputFocused
-                    : theme.colors.inputBorder,
-            backgroundColor: theme.colors.inputBackground,
+                    ? theme.colors.primary
+                    : theme.colors.border,
+            backgroundColor: theme.colors.inputBackground || theme.colors.surface,
+            borderWidth: isFocused ? 2 : 1,
         },
         error && styles.errorBorder,
-        isFocused && styles.focusedBorder,
     ];
 
     const getInputStyle = () => [
         styles.input,
         {
             color: theme.colors.text,
-            fontSize: size === 'small'
-                ? theme.typography?.fontSize?.sm || 14
-                : theme.typography?.fontSize?.base || 16,
-            fontFamily: theme.typography?.fontFamily?.regular || 'Inter-Regular',
+            fontSize: size === 'small' ? 14 : size === 'large' ? 18 : 16,
+            fontFamily: 'Inter-Regular',
         },
         leftIcon && styles.inputWithLeftIcon,
         (rightIcon || isPassword) && styles.inputWithRightIcon,
         style,
     ];
 
-    const getLabelStyle = () => ({
-        position: 'absolute' as const,
-        left: leftIcon ? 40 : 12,
-        color: error
-            ? theme.colors.inputError
-            : isFocused
-                ? theme.colors.inputFocused
-                : theme.colors.textSecondary,
-        fontSize: labelAnimation.interpolate({
-            inputRange: [0, 1],
-            outputRange: [
-                size === 'small' ? theme.typography?.fontSize?.sm || 14 : theme.typography?.fontSize?.base || 16,
-                theme.typography?.fontSize?.xs || 12
-            ],
-        }),
-        top: labelAnimation.interpolate({
-            inputRange: [0, 1],
-            outputRange: [
-                size === 'small' ? 8 : size === 'medium' ? 12 : 16,
-                -8
-            ],
-        }),
-        backgroundColor: theme.colors.inputBackground,
-        paddingHorizontal: 4,
-        fontFamily: theme.typography?.fontFamily?.regular || 'Inter-Regular',
-    });
-
     const getIconColor = () => {
-        if (error) return theme.colors.inputError;
-        if (isFocused) return theme.colors.inputFocused;
+        if (error) return theme.colors.error;
+        if (isFocused) return theme.colors.primary;
         return theme.colors.textSecondary;
     };
 
@@ -153,11 +111,18 @@ export const Input = forwardRef<TextInput, InputProps>(({
 
     return (
         <View style={getContainerStyle()}>
+            {/* Label externa (se fornecida) */}
             {label && (
-                <Animated.Text style={getLabelStyle()}>
+                <Text style={[
+                    styles.label,
+                    {
+                        color: error ? theme.colors.error : theme.colors.textSecondary,
+                        fontFamily: 'Inter-Medium',
+                    }
+                ]}>
                     {label}
                     {required && <Text style={{ color: theme.colors.error }}> *</Text>}
-                </Animated.Text>
+                </Text>
             )}
 
             <View style={getInputContainerStyle()}>
@@ -165,7 +130,7 @@ export const Input = forwardRef<TextInput, InputProps>(({
                     <View style={styles.leftIconContainer}>
                         <Ionicons
                             name={leftIcon}
-                            size={theme.sizes.icon.sm}
+                            size={size === 'large' ? 24 : 20}
                             color={getIconColor()}
                         />
                     </View>
@@ -174,11 +139,18 @@ export const Input = forwardRef<TextInput, InputProps>(({
                 <TextInput
                     ref={ref}
                     {...props}
+                    value={value}
                     style={getInputStyle()}
                     onFocus={handleFocus}
                     onBlur={handleBlur}
                     secureTextEntry={isPassword && !isPasswordVisible}
                     placeholderTextColor={theme.colors.textTertiary}
+                    // Propriedades importantes para evitar blur automático
+                    blurOnSubmit={false}
+                    returnKeyType="done"
+                    textContentType={isPassword ? 'password' : 'none'}
+                    autoCorrect={false}
+                    autoComplete={isPassword ? 'password' : 'off'}
                 />
 
                 {actualRightIcon && (
@@ -186,23 +158,26 @@ export const Input = forwardRef<TextInput, InputProps>(({
                         style={styles.rightIconContainer}
                         onPress={handleRightIconPress}
                         activeOpacity={0.7}
+                        // Prevenir que o toque tire o foco do input
+                        onPressIn={(e) => e.preventDefault()}
                     >
                         <Ionicons
                             name={actualRightIcon}
-                            size={theme.sizes.icon.sm}
+                            size={size === 'large' ? 24 : 20}
                             color={getIconColor()}
                         />
                     </TouchableOpacity>
                 )}
             </View>
 
+            {/* Helper text ou erro */}
             {(error || helperText) && (
                 <Text style={[
                     styles.helperText,
                     {
                         color: error ? theme.colors.error : theme.colors.textSecondary,
-                        fontSize: theme.typography.fontSize.xs,
-                        fontFamily: theme.typography.fontFamily.regular,
+                        fontSize: 12,
+                        fontFamily: 'Inter-Regular',
                     }
                 ]}>
                     {error || helperText}
@@ -219,43 +194,49 @@ const styles = StyleSheet.create({
     fullWidth: {
         width: '100%',
     },
+    label: {
+        fontSize: 14,
+        fontWeight: '600',
+        marginBottom: 8,
+        marginLeft: 4,
+    },
     inputContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        borderWidth: 1,
-        borderRadius: 8,
+        borderRadius: 12,
+        paddingHorizontal: 16,
         position: 'relative',
     },
-    focusedBorder: {
-        borderWidth: 2,
-    },
     errorBorder: {
-        borderWidth: 2,
+        borderColor: '#EF4444',
     },
     input: {
         flex: 1,
-        paddingHorizontal: 12,
         paddingVertical: 0,
+        fontSize: 16,
+        // Evitar comportamentos estranhos
+        textAlign: 'left',
     },
     inputWithLeftIcon: {
-        paddingLeft: 0,
+        marginLeft: 12,
     },
     inputWithRightIcon: {
-        paddingRight: 0,
+        marginRight: 12,
     },
     leftIconContainer: {
-        paddingLeft: 12,
-        paddingRight: 8,
         justifyContent: 'center',
+        alignItems: 'center',
     },
     rightIconContainer: {
-        paddingRight: 12,
-        paddingLeft: 8,
         justifyContent: 'center',
+        alignItems: 'center',
+        padding: 4,
+        borderRadius: 4,
     },
     helperText: {
-        marginTop: 4,
-        marginLeft: 12,
+        marginTop: 6,
+        marginLeft: 4,
+        lineHeight: 16,
     },
 });
 
