@@ -1,5 +1,11 @@
 // src/types/index.ts
 // ========================================
+// TIPOS PRINCIPAIS - ORGANIZADOS E CORRETOS
+// ========================================
+
+import { User } from 'firebase/auth';
+
+// ========================================
 // TIPOS BASE E UTILITÁRIOS
 // ========================================
 
@@ -7,9 +13,20 @@ export type UUID = string;
 export type DateString = string; // ISO format
 export type JSONString = string;
 
+// Interface base para entidades com ID numérico (SQLite)
 export interface BaseEntity {
     id: number;
     uuid: UUID;
+    created_at: DateString;
+    updated_at: DateString;
+    synced_at?: DateString;
+    is_active: boolean;
+}
+
+// Interface base para entidades com UUID como ID primário
+export interface BaseUUIDEntity {
+    id: string; // UUID string
+    uuid: string; // Para compatibilidade
     created_at: DateString;
     updated_at: DateString;
     synced_at?: DateString;
@@ -23,48 +40,21 @@ export interface SyncEntity extends BaseEntity {
 }
 
 // ========================================
-// USUÁRIO E AUTENTICAÇÃO - ATUALIZADO PARA MULTI-TENANT
+// RE-EXPORTAR TIPOS DE AUTENTICAÇÃO
 // ========================================
 
-export type UserProfile = 'admin' | 'engenheiro' | 'mestre' | 'operador' | 'visitante';
-export type UserGlobalRole = 'super_admin' | 'tenant_admin' | 'user';
-
-export interface User extends BaseEntity {
-    tenant_id: string; // 🔑 OBRIGATÓRIO - Chave do tenant
-    nome: string;
-    email: string;
-    telefone?: string;
-    perfil: UserProfile; // Perfil dentro do tenant
-    perfil_global?: UserGlobalRole; // Perfil global no sistema
-    avatar_url?: string;
-    empresa?: string;
-    is_tenant_owner?: boolean; // Se é dono do tenant
-    last_login_at?: DateString;
-    email_verified?: boolean;
-}
-
-export interface AuthState {
-    user: User | null;
-    token: string | null;
-    isAuthenticated: boolean;
-    isLoading: boolean;
-    error: string | null;
-}
-
-export interface LoginCredentials {
-    email: string;
-    password: string;
-    rememberMe?: boolean;
-}
-
-export interface RegisterData {
-    nome: string;
-    email: string;
-    telefone?: string;
-    empresa?: string;
-    password: string;
-    confirmPassword: string;
-}
+export type {
+    AuthConfig,
+    AuthContextType,
+    AuthError,
+    AuthState,
+    AuthTokenData,
+    LoginCredentials,
+    RegisterData,
+    User,
+    UserGlobalRole,
+    UserProfile
+} from './auth';
 
 // ========================================
 // OBRA
@@ -91,7 +81,7 @@ export interface Obra extends BaseEntity {
     contrato?: string;
     observacoes?: string;
 
-    // Dados calculados/relacionados
+    // Dados calculados/relacionados (opcional)
     responsavel?: User;
     equipe?: EquipeObra[];
     tarefas?: Tarefa[];
@@ -124,7 +114,7 @@ export interface EquipeObra extends BaseEntity {
     data_entrada: DateString;
     data_saida?: DateString;
 
-    // Dados relacionados
+    // Dados relacionados (opcional)
     usuario?: User;
     obra?: Obra;
 }
@@ -160,7 +150,7 @@ export interface CronogramaEtapa extends BaseEntity {
     cor: string;
     observacoes?: string;
 
-    // Dados relacionados
+    // Dados relacionados (opcional)
     obra?: Obra;
     etapa_pai?: CronogramaEtapa;
     sub_etapas?: CronogramaEtapa[];
@@ -194,7 +184,7 @@ export interface Tarefa extends BaseEntity {
     localizacao?: string;
     observacoes?: string;
 
-    // Dados relacionados
+    // Dados relacionados (opcional)
     obra?: Obra;
     etapa?: CronogramaEtapa;
     responsavel?: User;
@@ -240,7 +230,7 @@ export interface DiarioObra extends BaseEntity {
     aprovado_por?: UUID;
     status_aprovacao: StatusAprovacao;
 
-    // Dados relacionados
+    // Dados relacionados (opcional)
     obra?: Obra;
     registrado_por_usuario?: User;
     aprovado_por_usuario?: User;
@@ -258,152 +248,6 @@ export interface CreateDiarioData {
     observacoes?: string;
     fotos?: File[];
     audio?: File;
-}
-
-// ========================================
-// MATERIAIS E ESTOQUE
-// ========================================
-
-export interface Material extends BaseEntity {
-    tenant_id: string; // 🔑 CHAVE MULTI-TENANT
-    obra_id: UUID;
-    nome: string;
-    descricao?: string;
-    categoria?: string;
-    unidade_medida: string;
-    quantidade_estoque: number;
-    quantidade_minima: number;
-    preco_unitario: number;
-    fornecedor?: string;
-    codigo_fornecedor?: string;
-    observacoes?: string;
-
-    // Dados relacionados
-    obra?: Obra;
-    movimentacoes?: MovimentacaoMaterial[];
-}
-
-export type TipoMovimentacao = 'entrada' | 'saida' | 'ajuste' | 'transferencia';
-
-export interface MovimentacaoMaterial extends BaseEntity {
-    tenant_id: string; // 🔑 CHAVE MULTI-TENANT
-    material_id: UUID;
-    tipo_movimentacao: TipoMovimentacao;
-    quantidade: number;
-    valor_unitario?: number;
-    valor_total?: number;
-    data_movimentacao: DateString;
-    responsavel_id: UUID;
-    documento_referencia?: string;
-    observacoes?: string;
-
-    // Dados relacionados
-    material?: Material;
-    responsavel?: User;
-}
-
-// ========================================
-// DOCUMENTOS
-// ========================================
-
-export type TipoDocumento = 'projeto' | 'licenca' | 'contrato' | 'nota_fiscal' | 'foto' | 'video' | 'audio' | 'outro';
-
-export interface Documento extends BaseEntity {
-    tenant_id: string; // 🔑 CHAVE MULTI-TENANT
-    obra_id: UUID;
-    nome: string;
-    descricao?: string;
-    tipo: TipoDocumento;
-    categoria?: string;
-    arquivo_path: string;
-    arquivo_nome: string;
-    arquivo_tamanho?: number;
-    arquivo_tipo?: string; // MIME type
-    tags?: string[];
-    is_publico: boolean;
-    uploaded_by: UUID;
-    data_upload: DateString;
-    data_validade?: DateString;
-    versao: number;
-    documento_pai_id?: UUID;
-    observacoes?: string;
-
-    // Dados relacionados
-    obra?: Obra;
-    uploaded_by_usuario?: User;
-    documento_pai?: Documento;
-    versoes?: Documento[];
-}
-
-// ========================================
-// CONTROLE DE QUALIDADE
-// ========================================
-
-export interface ItemChecklist {
-    id: string;
-    nome: string;
-    descricao?: string;
-    obrigatorio: boolean;
-    tipo: 'boolean' | 'text' | 'number' | 'photo' | 'select';
-    opcoes?: string[]; // Para tipo select
-    valor?: any;
-    conforme?: boolean;
-    observacoes?: string;
-    fotos?: string[];
-}
-
-export type StatusQualidade = 'pendente' | 'em_verificacao' | 'aprovado' | 'reprovado' | 'corrigido';
-
-export interface ChecklistQualidade extends BaseEntity {
-    tenant_id: string; // 🔑 CHAVE MULTI-TENANT
-    obra_id: UUID;
-    etapa_id?: UUID;
-    nome: string;
-    descricao?: string;
-    itens_checklist: ItemChecklist[];
-    responsavel_verificacao?: UUID;
-    responsavel_aprovacao?: UUID;
-    data_verificacao?: DateString;
-    data_aprovacao?: DateString;
-    status: StatusQualidade;
-    observacoes?: string;
-    fotos_evidencia?: string[];
-
-    // Dados relacionados
-    obra?: Obra;
-    etapa?: CronogramaEtapa;
-    responsavel_verificacao_usuario?: User;
-    responsavel_aprovacao_usuario?: User;
-}
-
-// ========================================
-// CUSTOS E FINANCEIRO
-// ========================================
-
-export type CategoriaCusto = 'material' | 'mao_de_obra' | 'equipamento' | 'subcontratacao' | 'outros';
-
-export interface Custo extends BaseEntity {
-    tenant_id: string; // 🔑 CHAVE MULTI-TENANT
-    obra_id: UUID;
-    etapa_id?: UUID;
-    categoria: CategoriaCusto;
-    subcategoria?: string;
-    descricao: string;
-    valor_planejado: number;
-    valor_real: number;
-    data_planejada?: DateString;
-    data_real?: DateString;
-    responsavel_id?: UUID;
-    documento_referencia?: string;
-    aprovado_por?: UUID;
-    status_aprovacao: StatusAprovacao;
-    observacoes?: string;
-
-    // Dados relacionados
-    obra?: Obra;
-    etapa?: CronogramaEtapa;
-    responsavel?: User;
-    aprovado_por_usuario?: User;
 }
 
 // ========================================
@@ -515,10 +359,15 @@ export interface KPI {
 }
 
 // ========================================
-// EXPORTS
+// EXPORTS DE OUTROS ARQUIVOS
 // ========================================
 
-export * from './api';
-export * from './auth';
-export * from './navigation';
-export * from './tenant';
+// Re-exportar tipos de tenant
+export type {
+    ConviteTenant,
+    CreateTenantData, Tenant,
+    TenantContextType,
+    TenantLimits,
+    UserTenant
+} from './tenant';
+

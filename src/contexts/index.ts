@@ -1,10 +1,24 @@
 // src/contexts/index.ts
-// Exportar todos os contexts para facilitar imports
+// ========================================
+// EXPORTAÇÃO CENTRALIZADA DE CONTEXTS
+// ========================================
 
+// Autenticação
 export { AuthProvider, useAuth } from './AuthContext';
+
+// Rede
 export { NetworkProvider, useNetwork } from './NetworkContext';
-export {
-    Permission, PermissionsProvider,
-    usePermissions, withPermissions
-} from './PermissionsContext';
+
+// Tema
 export { ThemeProvider, useTheme } from './ThemeContext';
+
+// Permissões
+export {
+    Permission,
+    PermissionsProvider,
+    usePermissions,
+    withPermissions
+} from './PermissionsContext';
+
+// Tenant (multi-empresa) - quando implementado
+// export { TenantProvider, useTenant } from './TenantContext';

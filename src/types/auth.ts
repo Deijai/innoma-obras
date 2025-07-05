@@ -1,17 +1,84 @@
 // src/types/auth.ts
-// Este arquivo pode ser removido ou mantido para compatibilidade
-// Os tipos principais estão em src/types/index.ts
+// ========================================
+// TIPOS DE AUTENTICAÇÃO - CORRIGIDOS
+// ========================================
 
-import type { LoginCredentials, RegisterData, User } from './index';
+// ========================================
+// TIPOS BASE DE USUÁRIO
+// ========================================
 
-// Re-exportar tipos principais
-export type {
-    AuthState,
-    LoginCredentials,
-    RegisterData, User, UserGlobalRole, UserProfile
-} from './index';
+export type UserProfile = 'admin' | 'engenheiro' | 'mestre' | 'operador' | 'visitante';
+export type UserGlobalRole = 'super_admin' | 'tenant_admin' | 'user';
 
-// Tipos específicos de autenticação que não estão no index
+export interface User {
+    id: number;
+    uuid: string;
+    tenant_id: string; // 🔑 OBRIGATÓRIO - Chave do tenant
+    nome: string;
+    email: string;
+    telefone?: string;
+    perfil: UserProfile; // Perfil dentro do tenant
+    perfil_global?: UserGlobalRole; // Perfil global no sistema
+    avatar_url?: string;
+    empresa?: string;
+    is_tenant_owner: boolean; // ✅ CORRIGIDO: obrigatório, sempre boolean
+    created_at: string;
+    updated_at: string;
+    synced_at?: string;
+    is_active: boolean;
+    last_login_at?: string;
+    email_verified?: boolean;
+}
+
+// ========================================
+// CREDENCIAIS E FORMULÁRIOS
+// ========================================
+
+export interface LoginCredentials {
+    email: string;
+    password: string;
+    rememberMe?: boolean;
+}
+
+export interface RegisterData {
+    nome: string;
+    email: string;
+    telefone?: string;
+    empresa?: string;
+    password: string;
+    confirmPassword: string;
+}
+
+// ========================================
+// ESTADO DE AUTENTICAÇÃO
+// ========================================
+
+export interface AuthState {
+    user: User | null;
+    token: string | null;
+    isAuthenticated: boolean;
+    isLoading: boolean;
+    error: string | null;
+}
+
+// ========================================
+// CONTEXTO DE AUTENTICAÇÃO
+// ========================================
+
+export interface AuthContextType extends AuthState {
+    login: (credentials: LoginCredentials) => Promise<void>;
+    register: (data: RegisterData) => Promise<void>;
+    logout: () => Promise<void>;
+    resetPassword: (email: string) => Promise<void>;
+    refreshUser: () => Promise<void>;
+    updateUserProfile: (data: Partial<User>) => Promise<void>;
+    checkAuth: () => Promise<void>;
+}
+
+// ========================================
+// DADOS DE TOKEN
+// ========================================
+
 export interface AuthTokenData {
     token: string;
     refreshToken?: string;
@@ -25,24 +92,10 @@ export interface AuthError {
     details?: any;
 }
 
-export interface AuthContext {
-    user: User | null;
-    token: string | null;
-    isAuthenticated: boolean;
-    isLoading: boolean;
-    error: string | null;
+// ========================================
+// CONFIGURAÇÕES DE AUTENTICAÇÃO
+// ========================================
 
-    // Métodos de autenticação
-    login: (credentials: LoginCredentials) => Promise<void>;
-    register: (data: RegisterData) => Promise<void>;
-    logout: () => Promise<void>;
-    resetPassword: (email: string) => Promise<void>;
-    refreshUser: () => Promise<void>;
-    updateUserProfile: (data: Partial<User>) => Promise<void>;
-    checkAuth: () => Promise<void>;
-}
-
-// Configurações de autenticação
 export interface AuthConfig {
     tokenStorageKey: string;
     userStorageKey: string;

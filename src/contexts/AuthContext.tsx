@@ -1,25 +1,18 @@
 // src/contexts/AuthContext.tsx
-import AuthService from '@/services/auth/AuthService';
 import { auth } from '@/services/firebase/config';
 import { NetworkService } from '@/services/network/NetworkService';
-import type { AuthState, LoginCredentials, RegisterData, User } from '@/types';
-import type { CreateTenantData } from '@/types/tenant';
 import { onAuthStateChanged } from 'firebase/auth';
 import React, { createContext, useContext, useEffect, useState } from 'react';
 
-interface AuthContextType extends AuthState {
-    login: (credentials: LoginCredentials) => Promise<void>;
-    register: (data: RegisterData) => Promise<void>;
-    logout: () => Promise<void>;
-    resetPassword: (email: string) => Promise<void>;
-    refreshUser: () => Promise<void>;
-    updateUserProfile: (data: Partial<User>) => Promise<void>;
-    checkAuth: () => Promise<void>;
-
-    // Multi-tenant específico
-    createTenantAndUser: (tenantData: CreateTenantData, userData: RegisterData) => Promise<void>;
-    joinTenant: (inviteToken: string, userData: any) => Promise<void>;
-}
+import AuthService from '@/services/auth/AuthService';
+// ✅ CORRETO: Importar tipos específicos do arquivo auth.ts
+import type {
+    AuthContextType,
+    AuthState,
+    LoginCredentials,
+    RegisterData,
+    User
+} from '@/types/auth';
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -138,7 +131,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     /**
      * Login do usuário
-     * Identifica automaticamente o tenant pelo email ou usa dados salvos
      */
     const login = async (credentials: LoginCredentials) => {
         try {
@@ -176,7 +168,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     /**
      * Cadastro de usuário
-     * Cria automaticamente um tenant (empresa) para o primeiro usuário
      */
     const register = async (data: RegisterData) => {
         try {
@@ -209,7 +200,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     /**
      * Logout do usuário
-     * Limpa todos os dados locais e remove tokens
      */
     const logout = async () => {
         try {
@@ -242,7 +232,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     /**
      * Recuperação de senha
-     * Envia email para redefinição de senha
      */
     const resetPassword = async (email: string) => {
         try {
@@ -266,7 +255,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     /**
      * Atualizar dados do usuário
-     * Recarrega informações do usuário do banco local/Firebase
      */
     const refreshUser = async () => {
         try {
@@ -287,7 +275,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     /**
      * Atualizar perfil do usuário
-     * Modifica informações como nome, telefone, etc.
      */
     const updateUserProfile = async (data: Partial<User>) => {
         try {
@@ -324,72 +311,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
     };
 
-    /**
-     * Criar tenant e usuário (para empresas que estão começando)
-     * Usado quando uma empresa quer criar sua conta do zero
-     */
-    const createTenantAndUser = async (tenantData: CreateTenantData, userData: RegisterData) => {
-        try {
-            setAuthState(prev => ({ ...prev, isLoading: true, error: null }));
-
-            const { user, token } = await authService.createTenantAndUser(tenantData, userData);
-
-            setAuthState({
-                user,
-                token,
-                isAuthenticated: true,
-                isLoading: false,
-                error: null,
-            });
-
-            console.log('✅ Empresa e usuário criados com sucesso:', tenantData.nome);
-        } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : 'Erro ao criar empresa';
-
-            setAuthState(prev => ({
-                ...prev,
-                isLoading: false,
-                error: errorMessage,
-            }));
-
-            console.error('❌ Erro ao criar empresa:', errorMessage);
-            throw error;
-        }
-    };
-
-    /**
-     * Entrar em tenant via convite
-     * Usado quando um usuário recebe convite para entrar em uma empresa
-     */
-    const joinTenant = async (inviteToken: string, userData: any) => {
-        try {
-            setAuthState(prev => ({ ...prev, isLoading: true, error: null }));
-
-            const { user, token } = await authService.joinTenantByInvite(inviteToken, userData);
-
-            setAuthState({
-                user,
-                token,
-                isAuthenticated: true,
-                isLoading: false,
-                error: null,
-            });
-
-            console.log('✅ Convite aceito com sucesso. Bem-vindo à empresa!');
-        } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : 'Erro ao aceitar convite';
-
-            setAuthState(prev => ({
-                ...prev,
-                isLoading: false,
-                error: errorMessage,
-            }));
-
-            console.error('❌ Erro ao aceitar convite:', errorMessage);
-            throw error;
-        }
-    };
-
     const value: AuthContextType = {
         ...authState,
         login,
@@ -399,8 +320,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         refreshUser,
         updateUserProfile,
         checkAuth,
-        createTenantAndUser,
-        joinTenant,
     };
 
     return (
@@ -412,7 +331,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
 /**
  * Hook para usar o contexto de autenticação
- * Deve ser usado dentro de um AuthProvider
  */
 export function useAuth() {
     const context = useContext(AuthContext);

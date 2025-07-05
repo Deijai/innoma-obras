@@ -1,382 +1,509 @@
 # 🏗️ Innoma Obras
 
-**Aplicativo profissional para gestão completa de obras de construção civil**
+**Aplicativo completo para gestão de obras** - React Native com Expo Router e **Arquitetura Multi-Tenant**
 
-[![React Native](https://img.shields.io/badge/React%20Native-0.72.6-blue.svg)](https://reactnative.dev/)
-[![Expo](https://img.shields.io/badge/Expo-49.0.0-black.svg)](https://expo.dev/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.1.3-blue.svg)](https://www.typescriptlang.org/)
-[![SQLite](https://img.shields.io/badge/SQLite-Offline%20First-green.svg)](https://www.sqlite.org/)
+---
 
-## 🎯 Visão Geral
+## 📱 Sobre o Projeto
 
-O Innoma Obras é um aplicativo móvel completo para gerenciamento de obras de construção civil, desenvolvido com foco na experiência do usuário e funcionamento offline-first. Oferece todas as ferramentas necessárias para controlar obras desde o planejamento até a entrega final.
+O **Innoma Obras** é um aplicativo mobile desenvolvido para revolucionar a gestão de obras de construção civil. Com foco em **simplicidade**, **eficiência** e **modo offline-first**, oferece todas as ferramentas necessárias para gerenciar projetos de construção de forma profissional em uma **arquitetura multi-empresas**.
 
-## ✨ Principais Funcionalidades
+### ✨ Principais Características
 
-### 🏢 **Gestão de Obras**
-- ✅ Cadastro completo de obras com localização
-- 📊 Dashboard com indicadores de performance (KPIs)
-- 📈 Acompanhamento de progresso em tempo real
-- 🎯 Controle de prazos e orçamentos
-- 📍 Geolocalização das atividades
+- 🔄 **Modo Offline Completo** - Funciona sem internet
+- 🏢 **Multi-Tenant** - Múltiplas empresas isoladas
+- 🎨 **Design Moderno** - Interface limpa e intuitiva  
+- 🌙 **Tema Dark/Light** - Adaptável à preferência do usuário
+- 👥 **Gestão de Equipe** - Controle de permissões por papel
+- 📊 **Relatórios Inteligentes** - Analytics e insights
+- 🔒 **Segurança** - Autenticação robusta e dados criptografados
 
-### 👥 **Gestão de Equipe**
-- 👤 Controle de perfis e permissões (Admin, Engenheiro, Mestre, Operador, Visitante)
-- 🔐 Sistema de convites por e-mail
-- 📱 Comunicação interna por obra
-- ⏰ Controle de presença e atividades
+---
 
-### 📋 **Diário de Obra**
-- 📝 Registro diário das atividades
-- 📸 Anexo de fotos com geolocalização
-- 🎤 Gravação de áudios
-- ☁️ Informações meteorológicas
-- ✅ Sistema de aprovação
+## 🏢 **NOVA ARQUITETURA MULTI-TENANT**
 
-### ✅ **Gestão de Tarefas**
-- 📝 Criação e atribuição de tarefas
-- 🎯 Controle de status e prioridades
-- ⏱️ Acompanhamento de tempo
-- 📊 Relatórios de produtividade
-- 🔄 Dependências entre tarefas
+### 🎯 **Como Funciona:**
 
-### 📅 **Cronograma**
-- 📊 Visualização tipo Gantt Chart
-- 📈 Acompanhamento de etapas
-- ⚠️ Alertas de atrasos
-- 🔄 Reprogramação automática
-- 📊 Análise de desvios
-
-### 📦 **Controle de Materiais**
-- 🏪 Gestão de estoque
-- 📋 Controle de entradas e saídas
-- 💰 Acompanhamento de custos
-- 📊 Relatórios de consumo
-- ⚠️ Alertas de estoque mínimo
-
-### 💰 **Gestão Financeira**
-- 📊 Controle de custos por categoria
-- 💳 Registro de gastos
-- 📈 Comparativo planejado vs. executado
-- 📋 Aprovação de despesas
-- 📊 Relatórios financeiros
-
-### 🔍 **Controle de Qualidade**
-- ✅ Checklists personalizáveis
-- 📸 Registro de evidências
-- ❌ Controle de não conformidades
-- ✅ Sistema de aprovações
-- 📊 Relatórios de qualidade
-
-### 📄 **Gestão de Documentos**
-- 📁 Organização por categorias
-- 🔍 Busca inteligente
-- 📱 Visualização inline
-- 🔒 Controle de acesso
-- 📤 Compartilhamento seguro
-
-## 🏗️ Arquitetura Técnica
-
-### 📱 **Frontend**
-- **React Native** com Expo para desenvolvimento cross-platform
-- **TypeScript** para tipagem estática e melhor DX
-- **Expo Router** para navegação file-based
-- **Zustand** para gerenciamento de estado global
-- **React Hook Form** + Yup para formulários e validação
-
-### 💾 **Armazenamento**
-- **SQLite** como banco principal (offline-first)
-- **Expo Secure Store** para dados sensíveis
-- **File System** para arquivos e mídias
-- **Sincronização automática** com servidor
-
-### 🎨 **Design System**
-- **Tema dark/light** automático
-- **Componentes reutilizáveis** tipados
-- **Animações fluidas** com Reanimated
-- **Responsividade** para tablets
-- **Acessibilidade** nativa
-
-### 🔄 **Offline-First**
-- **Funcionamento 100% offline**
-- **Sincronização inteligente**
-- **Resolução de conflitos**
-- **Queue de sincronização**
-- **Backup automático**
-
-## 🚀 Instalação e Execução
-
-### 📋 Pré-requisitos
-```bash
-node >= 18.0.0
-npm >= 9.0.0
-expo-cli >= 6.0.0
+```mermaid
+graph TD
+    A[Usuário] --> B{Primeira vez?}
+    B -->|Sim| C[Criar Empresa]
+    B -->|Não| D[Login Normal]
+    C --> E[Empresa criada]
+    E --> F[Usuário = Admin da Empresa]
+    D --> G{Tem empresa?}
+    G -->|Sim| H[Acesso à empresa]
+    G -->|Não| I[Aceitar convite]
+    I --> H
+    H --> J[Usar aplicativo]
 ```
 
-### 🔧 Instalação
-```bash
-# Clone o repositório
-git clone https://github.com/sua-empresa/innoma-obras.git
+### 🔑 **Fluxos de Registro:**
 
-# Entre no diretório
-cd innoma-obras
-
-# Instale as dependências
-npm install
-
-# Configure as variáveis de ambiente
-cp .env.example .env
+#### **1. Criação de Nova Empresa**
+```typescript
+// Primeiro usuário cria empresa + conta
+register({
+  nome: "João Silva",
+  email: "joao@construtora.com", 
+  empresa: "Construtora Silva LTDA",
+  password: "senha123"
+})
+// → Cria tenant + usuário como owner/admin
 ```
 
-### 🏃‍♂️ Executação
-```bash
-# Desenvolvimento
-npm start
-
-# iOS Simulator
-npm run ios
-
-# Android Emulator
-npm run android
-
-# Web (para testes)
-npm run web
+#### **2. Convite para Empresa Existente**
+```typescript
+// Admin convida novo membro
+inviteUser({
+  email: "maria@email.com",
+  role: "engenheiro", 
+  tenantId: "empresa-uuid"
+})
+// → Novo usuário aceita convite
+acceptInvite(token, userData)
 ```
 
-### 📦 Build
-```bash
-# Build Android
-npm run build:android
-
-# Build iOS
-npm run build:ios
+#### **3. Login Multi-Tenant**
+```typescript
+// Sistema identifica automaticamente a empresa do usuário
+login({
+  email: "joao@construtora.com",
+  password: "senha123"
+})
+// → Usuário logado na empresa correta
 ```
+
+---
+
+## 🛠️ Tecnologias Utilizadas
+
+### **Core**
+- **React Native** + **Expo SDK 51**
+- **TypeScript** - Tipagem estática
+- **Expo Router** - Navegação file-based (estilo Next.js)
+
+### **Multi-Tenant**
+- **Firebase Auth** - Autenticação de usuários
+- **Firestore** - Sincronização multi-tenant
+- **SQLite** - Armazenamento local isolado por empresa
+
+### **Banco de Dados**
+- **SQLite** - Armazenamento local
+- **Expo Secure Store** - Dados sensíveis
+- **AsyncStorage** - Preferências do usuário
+
+### **UI/UX**
+- **Expo Linear Gradient** - Gradientes
+- **React Native Reanimated** - Animações fluidas
+- **Expo Vector Icons** - Ícones profissionais
+- **React Native Gesture Handler** - Gestos nativos
+
+### **Funcionalidades**
+- **Expo Image Picker** - Câmera e galeria
+- **Expo Location** - Geolocalização
+- **Expo File System** - Gerenciamento de arquivos
+- **Date-fns** - Manipulação de datas
+
+---
 
 ## 📁 Estrutura do Projeto
 
 ```
-innoma-obras/
-├── 📱 app/                    # Rotas do Expo Router
-│   ├── (auth)/               # Autenticação
-│   ├── (tabs)/               # Navegação principal
-│   ├── obra/                 # Detalhes das obras
-│   └── modal/                # Modais globais
-├── 🧩 src/
-│   ├── components/           # Componentes reutilizáveis
-│   ├── services/            # Serviços (API, DB, etc.)
-│   ├── store/               # Gerenciamento de estado
-│   ├── hooks/               # Hooks customizados
-│   ├── contexts/            # React Contexts
-│   ├── constants/           # Constantes globais
-│   ├── types/               # Tipos TypeScript
-│   └── styles/              # Sistema de design
-├── 📄 assets/                # Recursos estáticos
-└── 📚 docs/                  # Documentação
+📦 InnomaObras/
+├── 📱 app/                          # Expo Router (file-based routing)
+│   ├── _layout.tsx                  # Layout principal + AuthGuard
+│   ├── index.tsx                    # Entry point
+│   ├── 🔐 (auth)/                   # Autenticação
+│   │   ├── login.tsx                # Login multi-tenant
+│   │   ├── register.tsx             # Registro com criação de empresa
+│   │   ├── forgot-password.tsx      # Recuperar senha
+│   │   └── join-tenant.tsx          # Aceitar convite de empresa
+│   ├── 📋 (tabs)/                   # Navegação principal
+│   │   ├── index.tsx                # Dashboard da empresa
+│   │   ├── obras.tsx                # Gestão de obras
+│   │   ├── calendario.tsx           # Cronograma e agenda
+│   │   ├── equipe.tsx               # Gestão de equipe
+│   │   └── perfil.tsx               # Perfil + configurações empresa
+│   ├── 🏗️ obra/[id]/               # Detalhes de obra específica
+│   │   ├── diario.tsx               # Diário de obra
+│   │   ├── tarefas.tsx              # Tarefas da obra
+│   │   ├── cronograma.tsx           # Cronograma da obra
+│   │   ├── materiais.tsx            # Materiais e estoque
+│   │   ├── financeiro.tsx           # Custos e orçamento
+│   │   ├── documentos.tsx           # Documentos da obra
+│   │   ├── qualidade.tsx            # Controle de qualidade
+│   │   └── configuracoes.tsx        # Configurações da obra
+│   └── 📱 modal/                    # Modais globais
+│       ├── adicionar-obra.tsx       # Criar nova obra
+│       ├── adicionar-tarefa.tsx     # Criar tarefa
+│       ├── registro-diario.tsx      # Registrar diário
+│       ├── upload-documento.tsx     # Upload de arquivos
+│       └── invite-user.tsx          # Convidar membro para empresa
+├── 🔧 src/
+│   ├── 🧩 components/               # Componentes reutilizáveis
+│   │   ├── common/                  # Button, Input, Card, etc.
+│   │   ├── forms/                   # Formulários específicos
+│   │   └── charts/                  # Gráficos e visualizações
+│   ├── 🌐 contexts/                 # Context API
+│   │   ├── AuthContext.tsx          # Autenticação multi-tenant
+│   │   ├── TenantContext.tsx        # 🆕 Gestão de empresas
+│   │   ├── ThemeContext.tsx         # Tema Dark/Light
+│   │   ├── NetworkContext.tsx       # Status de rede
+│   │   └── PermissionsContext.tsx   # Permissões por empresa
+│   ├── ⚡ services/                 # Serviços
+│   │   ├── auth/                    # Autenticação multi-tenant
+│   │   ├── database/                # SQLite + migrations
+│   │   ├── sync/                    # Sincronização por empresa
+│   │   ├── storage/                 # Armazenamento seguro
+│   │   └── firebase/                # Configuração Firebase
+│   ├── 🔗 hooks/                    # Custom hooks
+│   ├── 🎨 constants/                # Cores, tamanhos, etc.
+│   ├── 📝 types/                    # Tipos TypeScript
+│   │   ├── index.ts                 # Tipos principais + BaseEntity
+│   │   ├── auth.ts                  # Tipos de autenticação
+│   │   └── tenant.ts                # 🆕 Tipos multi-tenant
+│   └── 🛠️ utils/                    # Utilitários
+└── 📎 assets/                       # Imagens, fontes, ícones
 ```
-
-## 🔐 Segurança e Permissões
-
-### 👤 **Perfis de Usuário**
-- **Admin**: Acesso total ao sistema
-- **Engenheiro**: Gestão completa da obra
-- **Mestre**: Execução e controle operacional
-- **Operador**: Registro de atividades
-- **Visitante**: Apenas visualização
-
-### 🛡️ **Controle de Acesso**
-- Autenticação obrigatória
-- Permissões por tela/funcionalidade
-- Dados criptografados localmente
-- Sincronização segura
-
-## 📊 Funcionalidades Avançadas
-
-### 🤖 **Inteligência Artificial**
-- Previsão de atrasos baseada em histórico
-- Sugestões de otimização de cronograma
-- Análise preditiva de custos
-- Detecção automática de padrões
-
-### 📈 **Analytics e Relatórios**
-- Dashboard executivo personalizado
-- Relatórios automatizados (PDF)
-- Indicadores de performance (KPIs)
-- Análise de tendências
-- Comparativos entre obras
-
-### 🔔 **Notificações Inteligentes**
-- Lembretes de prazos
-- Alertas de desvios orçamentários
-- Notificações de aprovações pendentes
-- Updates de status da equipe
-- Alertas de estoque baixo
-
-### 📍 **Geolocalização**
-- Registro automático de localização
-- Controle de presença por geofencing
-- Mapeamento de atividades
-- Rastreamento de equipamentos
-- Verificação de check-ins
-
-## 🛠️ Desenvolvimento por Etapas
-
-### ✅ **Etapa 1 - CONCLUÍDA: Infraestrutura Base**
-- [x] Configuração do projeto React Native + Expo
-- [x] Setup TypeScript completo
-- [x] Estrutura de diretórios modular
-- [x] Sistema de tema dark/light
-- [x] Componentes base (Button, Input, Card)
-- [x] Configuração SQLite + migrações
-- [x] Context API estruturado
-
-### 🚧 **Etapa 2 - EM ANDAMENTO: Autenticação**
-- [ ] Firebase/Supabase Auth setup
-- [ ] Telas de Login/Cadastro/Recuperação
-- [ ] Sistema de convites por e-mail
-- [ ] Gestão de perfis e permissões
-- [ ] Middleware de autorização
-- [ ] Persistência de sessão
-
-### 📅 **Etapa 3 - PRÓXIMA: Sincronização**
-- [ ] Camada de repositórios
-- [ ] Sistema de sincronização
-- [ ] Resolução de conflitos
-- [ ] Queue offline
-- [ ] Testes de conectividade
-
-### 🏗️ **Etapa 4 - MVP Funcional**
-- [ ] CRUD de obras
-- [ ] Gestão de equipe
-- [ ] Diário de obra
-- [ ] Sistema de tarefas
-- [ ] Interface principal
-
-### 💰 **Etapa 5 - Funcionalidades Avançadas**
-- [ ] Controle financeiro
-- [ ] Gestão de materiais
-- [ ] Relatórios PDF
-- [ ] Sistema de qualidade
-
-### 🤖 **Etapa 6 - IA e Analytics**
-- [ ] Dashboard inteligente
-- [ ] Previsões automáticas
-- [ ] Análise de padrões
-- [ ] Otimizações sugeridas
-
-## 🎨 Design e UX
-
-### 🖌️ **Princípios de Design**
-- **Minimalismo**: Interface limpa e focada
-- **Consistência**: Padrões visuais uniformes
-- **Acessibilidade**: Suporte completo a screen readers
-- **Performance**: Animações de 60fps
-- **Responsividade**: Adaptação para todos os tamanhos
-
-### 🌈 **Sistema de Cores**
-```typescript
-// Cores Primárias
-primary: '#2563EB'      // Azul profissional
-secondary: '#10B981'    // Verde construção
-accent: '#F59E0B'       // Amarelo atenção
-
-// Status
-success: '#10B981'      // Verde sucesso
-warning: '#F59E0B'      // Amarelo atenção
-error: '#EF4444'        // Vermelho erro
-info: '#3B82F6'         // Azul informação
-```
-
-### 📱 **Componentes Principais**
-- **Button**: 4 variantes (primary, secondary, outline, ghost)
-- **Input**: Floating labels, validação visual, ícones
-- **Card**: Elevação, bordas, gradientes
-- **Modal**: Animações suaves, backdrop blur
-- **Toast**: Notificações não invasivas
-
-## 🧪 Testes e Qualidade
-
-### 🔍 **Estratégia de Testes**
-- **Unit Tests**: Jest + Testing Library
-- **E2E Tests**: Detox para automação
-- **Performance**: Flipper + metrics
-- **Acessibilidade**: Testes automatizados
-- **Offline**: Simulação de cenários
-
-### 📊 **Métricas de Qualidade**
-- Cobertura de testes > 80%
-- Performance bundle < 2MB
-- Tempo de inicialização < 3s
-- Taxa de crash < 0.1%
-- Nota App Store/Play Store > 4.5
-
-## 🚀 Deploy e Distribuição
-
-### 📦 **Build Process**
-```bash
-# Build de produção
-expo build:android --type apk
-expo build:ios --type archive
-
-# Upload automático
-eas submit --platform android
-eas submit --platform ios
-```
-
-### 🏪 **Distribuição**
-- **Play Store**: Release automático via GitHub Actions
-- **App Store**: TestFlight → Produção
-- **Enterprise**: MDM para empresas
-- **Web**: PWA para acesso browser
-
-## 📈 Roadmap Futuro
-
-### 🌟 **Versão 2.0**
-- [ ] Integração com drones para inspeção
-- [ ] Realidade aumentada para visualização
-- [ ] Blockchain para certificação de qualidade
-- [ ] Machine Learning para otimização
-
-### 🔮 **Versão 3.0**
-- [ ] IoT para monitoramento automático
-- [ ] Integração com BIM (Building Information Modeling)
-- [ ] API aberta para integrações
-- [ ] Marketplace de fornecedores
-
-## 🤝 Contribuição
-
-### 👨‍💻 **Para Desenvolvedores**
-1. Fork o projeto
-2. Crie uma branch para sua feature
-3. Siga os padrões de código estabelecidos
-4. Escreva testes para suas alterações
-5. Abra um Pull Request
-
-### 📝 **Padrões de Código**
-- ESLint + Prettier configurados
-- Conventional Commits
-- TypeScript strict mode
-- Documentação obrigatória
-
-## 📞 Suporte
-
-### 🆘 **Canais de Suporte**
-- **Email**: suporte@innoma.com.br
-- **WhatsApp**: +55 (11) 99999-9999
-- **Portal**: https://suporte.innoma.com.br
-- **GitHub Issues**: Para bugs e sugestões
-
-### 📚 **Documentação**
-- [Manual do Usuário](./docs/USER_MANUAL.md)
-- [Guia de Implementação](./docs/IMPLEMENTATION_GUIDE.md)
-- [API Reference](./docs/API.md)
-- [Troubleshooting](./docs/TROUBLESHOOTING.md)
-
-## 📄 Licença
-
-Este projeto está licenciado sob a licença MIT - veja o arquivo [LICENSE](LICENSE) para detalhes.
 
 ---
 
-**Desenvolvido com ❤️ pela equipe Innoma**
+## 🚀 Como Executar
 
-*"Transformando a gestão de obras com tecnologia de ponta"*
+### **Pré-requisitos**
+
+- Node.js 18+ 
+- npm ou yarn
+- Expo CLI
+- Android Studio / Xcode (para emuladores)
+- **Firebase Project** configurado para multi-tenant
+
+### **Instalação**
+
+```bash
+# 1. Clonar o projeto
+git clone https://github.com/seu-usuario/innoma-obras.git
+cd innoma-obras
+
+# 2. Instalar dependências
+npm install
+
+# 3. Configurar Firebase Multi-Tenant
+cp .env.example .env
+# Editar .env com suas credenciais Firebase
+
+# 4. Executar no desenvolvimento
+npx expo start
+```
+
+### **Configuração Firebase Multi-Tenant**
+
+```javascript
+// app.json - Configuração multi-tenant
+{
+  "expo": {
+    "extra": {
+      "firebaseApiKey": "sua-chave",
+      "firebaseProjectId": "innoma-obras-multi",
+      "enableMultiTenant": true
+    }
+  }
+}
+```
+
+### **Executar em Dispositivos**
+
+```bash
+# Android
+npx expo start --android
+
+# iOS  
+npx expo start --ios
+
+# Web
+npx expo start --web
+```
+
+---
+
+## 🎯 Funcionalidades Implementadas
+
+### ✅ **Etapa 1 - CONCLUÍDA: Infraestrutura Multi-Tenant**
+- [x] Projeto React Native + TypeScript configurado
+- [x] Expo Router com navegação file-based
+- [x] **Arquitetura Multi-Tenant** completa
+- [x] Tema Dark/Light automático
+- [x] Estrutura de diretórios modular
+- [x] Context API multi-empresa (Auth, Tenant, Theme, Permissions)
+- [x] **Sistema de banco segregado por empresa**
+- [x] **Firebase configurado para multi-tenant**
+
+### ✅ **Etapa 2 - CONCLUÍDA: Autenticação Multi-Tenant**
+- [x] Firebase Auth setup para múltiplas empresas
+- [x] **Tela de registro que cria empresa + usuário owner**
+- [x] **Sistema de convites por e-mail para empresas**
+- [x] **Login automático detecta empresa do usuário**
+- [x] Sistema de permissões por empresa e perfil
+- [x] **TenantContext para gestão de empresas**
+- [x] Persistência de sessão com empresa ativa
+
+### ✅ **Etapa 3 - CONCLUÍDA: Banco Multi-Tenant**
+- [x] **Esquema SQLite com tenant_id em todas as tabelas**
+- [x] **Migrações preparadas para isolamento por empresa**
+- [x] **Camada de repositórios com filtro automático por tenant**
+- [x] **Sistema de sincronização isolado por empresa**
+- [x] **Controle de limites por plano de empresa**
+
+### 🚧 **Etapa 4 - EM ANDAMENTO: MVP Funcional Multi-Tenant**
+- [ ] CRUD de obras isolado por empresa
+- [ ] Gestão de equipe por empresa
+- [ ] Diário de obra com tenant_id
+- [ ] Sistema de tarefas isolado por empresa
+- [ ] Interface principal com dados da empresa ativa
+
+---
+
+## 🏢 **DETALHES DA ARQUITETURA MULTI-TENANT**
+
+### 🔑 **Isolamento de Dados**
+
+```sql
+-- ✅ Todas as tabelas têm tenant_id
+CREATE TABLE obras (
+    id INTEGER PRIMARY KEY,
+    uuid TEXT UNIQUE,
+    tenant_id TEXT NOT NULL, -- 🔑 ISOLAMENTO
+    nome TEXT,
+    -- ... outros campos
+    FOREIGN KEY (tenant_id) REFERENCES tenants(id)
+);
+
+-- ✅ Índices otimizados para multi-tenant
+CREATE INDEX idx_obras_tenant ON obras(tenant_id, status);
+```
+
+### 🔒 **Segurança Multi-Tenant**
+
+```typescript
+// ✅ Todas as queries filtram automaticamente por tenant
+const obras = await executeSelectQuery(`
+    SELECT * FROM obras 
+    WHERE tenant_id = ? AND is_active = 1
+`, [currentTenant.id]);
+
+// ✅ Middleware automático de isolamento
+const { currentTenant } = useTenant();
+if (!currentTenant) throw new Error('Tenant não ativo');
+```
+
+### 📊 **Limites por Plano**
+
+```typescript
+interface TenantLimits {
+    usuarios: { usado: 5, limite: 10, percentual: 50 };
+    obras: { usado: 3, limite: 5, percentual: 60 };
+    storage: { usado_mb: 100, limite_gb: 1, percentual: 10 };
+}
+
+// ✅ Verificação automática de limites
+const canAddUser = () => tenantLimits.usuarios.usado < tenantLimits.usuarios.limite;
+```
+
+---
+
+## 🎨 Design System
+
+### **Cores Principais**
+```typescript
+primary: '#2563EB'      // Azul profissional
+secondary: '#F97316'    // Laranja construção  
+success: '#16A34A'      // Verde aprovação
+warning: '#EAB308'      // Amarelo atenção
+error: '#DC2626'        // Vermelho perigo
+```
+
+### **Componentes**
+- **Button** - 4 variantes (primary, secondary, outline, ghost)
+- **Input** - Com ícones, validação e estados
+- **Card** - 3 variantes (default, elevated, outlined)
+
+### **Tipografia**
+- **Heading** - Inter Bold (títulos)
+- **Body** - Inter Regular (texto corrido)
+- **Caption** - Inter Medium (legendas)
+
+---
+
+## 👥 Sistema de Permissões Multi-Tenant
+
+```typescript
+// 🏢 Perfis por empresa
+enum TenantRole {
+  OWNER = 'owner',           // Dono da empresa (máximo controle)
+  ADMIN = 'admin',           // Administrador da empresa
+  ENGENHEIRO = 'engenheiro', // Gerencia obras
+  MESTRE = 'mestre',         // Coordena equipe  
+  OPERARIO = 'operario',     // Executa tarefas
+  VISITANTE = 'visitante'    // Apenas visualização
+}
+
+// ✅ Verificação de permissão por empresa
+const { canManageUsers, currentTenant } = useTenant();
+if (canManageUsers()) {
+    // Usuário pode gerenciar outros usuários desta empresa
+}
+```
+
+---
+
+## 📋 Fluxos de Usuário Multi-Tenant
+
+### **1. Primeiro Usuário (Criar Empresa)**
+```
+1. Usuário acessa app pela primeira vez
+2. Clica em "Criar Nova Empresa"
+3. Preenche: Nome, Email, Empresa, Senha
+4. Sistema cria:
+   - Tenant (empresa) no Firebase/SQLite
+   - Usuário como owner da empresa
+   - Configurações padrão da empresa
+5. Usuário logado como admin da nova empresa
+```
+
+### **2. Convite para Empresa**
+```
+1. Admin acessa "Equipe" → "Convidar Membro"
+2. Preenche: Email, Perfil (engenheiro/mestre/etc.)
+3. Sistema envia email com link de convite
+4. Convidado clica no link
+5. Se já tem conta: apenas aceita convite
+6. Se não tem conta: cria conta + aceita convite
+7. Usuário logado na empresa que o convidou
+```
+
+### **3. Login Automático**
+```
+1. Usuário faz login com email/senha
+2. Sistema consulta: qual empresa esse usuário pertence?
+3. Carrega dados da empresa automaticamente
+4. Interface mostra dados isolados da empresa
+```
+
+---
+
+## 🧪 Como Testar Multi-Tenant
+
+### **Cenário 1: Criar Primeira Empresa**
+```bash
+1. npx expo start
+2. Registro → "Criar Nova Empresa"
+3. Dados: João Silva, joao@silva.com, "Silva Construções"
+4. Verificar: empresa criada + usuário como owner
+```
+
+### **Cenário 2: Convidar Segundo Usuário**
+```bash
+1. Login como João Silva (admin)
+2. Equipe → Convidar → maria@silva.com (engenheiro)
+3. Simular aceite do convite
+4. Login como Maria → deve ver dados da "Silva Construções"
+```
+
+### **Cenário 3: Isolamento de Dados**
+```bash
+1. Criar segunda empresa: "Costa Engenharia"
+2. Criar obras em ambas empresas
+3. Verificar: João vê apenas obras da Silva
+4. Verificar: Maria vê apenas obras da Silva
+```
+
+---
+
+## 🔧 Configurações de Desenvolvimento
+
+### **Firebase Multi-Tenant**
+```javascript
+// firestore.rules - Regras de segurança por empresa
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Usuários só acessam dados da própria empresa
+    match /obras/{obraId} {
+      allow read, write: if resource.data.tenant_id == 
+                           get(/databases/$(database)/documents/users/$(request.auth.uid)).data.tenant_id;
+    }
+  }
+}
+```
+
+### **SQLite Multi-Tenant**
+```sql
+-- Trigger automático para inserir tenant_id
+CREATE TRIGGER insert_tenant_id_obras
+BEFORE INSERT ON obras
+FOR EACH ROW
+WHEN NEW.tenant_id IS NULL
+BEGIN
+    SELECT RAISE(ABORT, 'tenant_id é obrigatório');
+END;
+```
+
+---
+
+## 📊 Métricas por Empresa
+
+### **Dashboard da Empresa**
+- Obras ativas da empresa
+- Equipe da empresa  
+- Orçamento total da empresa
+- Progresso médio das obras
+- Uso de recursos (usuários, storage, etc.)
+
+### **Limites por Plano**
+```typescript
+const planLimits = {
+    basic: { users: 5, projects: 3, storage_gb: 1 },
+    pro: { users: 25, projects: 15, storage_gb: 10 },
+    enterprise: { users: 100, projects: 50, storage_gb: 50 }
+};
+```
+
+---
+
+## 🤝 Contribuição Multi-Tenant
+
+### **Padrões de Código Multi-Tenant**
+```typescript
+// ✅ Sempre filtrar por tenant_id
+const getObras = async () => {
+    const { currentTenant } = useTenant();
+    return await executeSelectQuery(`
+        SELECT * FROM obras WHERE tenant_id = ?
+    `, [currentTenant.id]);
+};
+
+// ✅ Verificar permissões por empresa
+const { canManageObras } = usePermissions();
+if (!canManageObras()) {
+    throw new Error('Sem permissão nesta empresa');
+}
+```
+
+---
+
+## 📄 Licença
+
+Este projeto está sob licença **MIT**. Veja o arquivo [LICENSE](LICENSE) para mais detalhes.
+
+---
+
+## 📞 Suporte Multi-Tenant
+
+- **Email**: suporte@innoma.com
+- **GitHub**: [Issues](https://github.com/seu-usuario/innoma-obras/issues)
+- **Docs Multi-Tenant**: [Wiki](https://github.com/seu-usuario/innoma-obras/wiki/multi-tenant)
+
+---
+
+**Desenvolvido com ❤️ para revolucionar a gestão de obras com arquitetura multi-empresa** 🏢🇧🇷

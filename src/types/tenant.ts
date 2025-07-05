@@ -1,11 +1,20 @@
-// src/types/index.ts
+// src/types/tenant.ts
 // ========================================
-// TIPOS BASE E UTILITÁRIOS
+// TIPOS DE TENANT (MULTI-EMPRESA) - CORRIGIDOS
 // ========================================
 
+// src/types/tenant.ts
+// ========================================
+// TIPOS DE TENANT (MULTI-EMPRESA) - CORRIGIDOS
+// ========================================
+
+// ========================================
+// IMPORTAR INTERFACES BASE
+// ========================================
+
+// Interfaces base definidas em index.ts
 export type UUID = string;
-export type DateString = string; // ISO format
-export type JSONString = string;
+export type DateString = string;
 
 export interface BaseEntity {
     id: number;
@@ -16,39 +25,14 @@ export interface BaseEntity {
     is_active: boolean;
 }
 
-export interface SyncEntity extends BaseEntity {
-    lastModified: DateString;
-    needsSync: boolean;
-    syncStatus: 'pending' | 'syncing' | 'synced' | 'error';
-}
-
-// ========================================
-// USUÁRIO E AUTENTICAÇÃO - ATUALIZADO PARA MULTI-TENANT
-// ========================================
-
-export type UserProfile = 'admin' | 'engenheiro' | 'mestre' | 'operador' | 'visitante';
-export type UserGlobalRole = 'super_admin' | 'tenant_admin' | 'user';
-
-export interface User extends BaseEntity {
-    tenant_id: string; // 🔑 OBRIGATÓRIO - Chave do tenant
-    nome: string;
-    email: string;
-    telefone?: string;
-    perfil: UserProfile; // Perfil dentro do tenant
-    perfil_global?: UserGlobalRole; // Perfil global no sistema
-    avatar_url?: string;
-    empresa?: string;
-    is_tenant_owner?: boolean; // Se é dono do tenant
-    last_login_at?: DateString;
-    email_verified?: boolean;
-}
-
-export interface AuthState {
-    user: User | null;
-    token: string | null;
-    isAuthenticated: boolean;
-    isLoading: boolean;
-    error: string | null;
+// ✅ Interface base para entidades com UUID como ID primário
+export interface BaseUUIDEntity {
+    id: string; // UUID string
+    uuid: string; // Para compatibilidade
+    created_at: DateString;
+    updated_at: DateString;
+    synced_at?: DateString;
+    is_active: boolean;
 }
 
 // ========================================
@@ -58,7 +42,8 @@ export interface AuthState {
 export type TenantStatus = 'ativo' | 'suspenso' | 'cancelado' | 'trial';
 export type TenantPlan = 'basico' | 'pro' | 'enterprise' | 'custom';
 
-export interface Tenant extends BaseEntity {
+export interface Tenant extends BaseUUIDEntity {
+    // ✅ CORRIGIDO: herda id: string de BaseUUIDEntity
     nome: string;
     slug: string; // URL-friendly identifier (ex: empresa-abc)
     cnpj?: string;
@@ -85,12 +70,6 @@ export interface Tenant extends BaseEntity {
     // Dados de faturamento
     billing_email?: string;
     billing_address?: string;
-
-    // Dados relacionados
-    owner?: User;
-    usuarios?: User[];
-    total_obras?: number;
-    storage_usado_mb?: number;
 }
 
 export interface TenantConfiguracoes {
@@ -147,10 +126,6 @@ export interface ConviteTenant extends BaseEntity {
     data_expiracao: string;
     status: ConviteStatus;
     mensagem?: string;
-
-    // Dados relacionados
-    tenant?: Tenant;
-    enviado_por_usuario?: User;
 }
 
 // ========================================
@@ -166,16 +141,6 @@ export interface UserTenant extends BaseEntity {
     is_active: boolean;
     joined_at: string;
     last_access_at?: string;
-
-    // Dados relacionados
-    user?: User;
-    tenant?: Tenant;
-}
-
-// Estendendo o User base com informações de tenant quando necessário
-export interface UserTenantInfo {
-    current_tenant?: Tenant;
-    tenants?: UserTenant[]; // Para usuários multi-tenant
 }
 
 // ========================================

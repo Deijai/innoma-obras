@@ -1,6 +1,4 @@
 // src/services/auth/AuthService.ts
-import type { LoginCredentials, RegisterData, User, UserProfile } from '@/types';
-import type { CreateTenantData } from '@/types/tenant';
 import {
     createUserWithEmailAndPassword,
     sendEmailVerification,
@@ -16,6 +14,10 @@ import {
     setDoc
 } from 'firebase/firestore';
 import { v4 as uuidv4 } from 'uuid';
+
+// ✅ CORRETO: Importar tipos específicos dos arquivos corretos
+import type { LoginCredentials, RegisterData, User, UserProfile } from '@/types/auth';
+import type { CreateTenantData } from '@/types/tenant';
 import { executeQuery, executeSelectQuery } from '../database/sqlite';
 import { auth, FirebaseConfig, firestore } from '../firebase/config';
 import { NetworkService } from '../network/NetworkService';
@@ -278,157 +280,6 @@ export class AuthService {
             return { user, token };
         } catch (error) {
             console.error('Erro no cadastro:', error);
-            throw this.handleAuthError(error);
-        }
-    }
-
-    /**
-     * Criar tenant e usuário (para first-time setup)
-     */
-    async createTenantAndUser(tenantData: CreateTenantData, userData: RegisterData): Promise<{ user: User; token: string }> {
-        const isOnline = await NetworkService.isConnected();
-        if (!isOnline) {
-            throw new Error('Criação de empresa requer conexão com a internet');
-        }
-
-        try {
-            // Criar usuário no Firebase
-            const userCredential = await createUserWithEmailAndPassword(
-                auth,
-                userData.email,
-                userData.password
-            );
-
-            const firebaseUser = userCredential.user;
-            const userId = firebaseUser.uid;
-            const tenantId = uuidv4();
-
-            // Criar tenant
-            await this.createTenantInDatabase(tenantId, tenantData);
-
-            // Criar usuário como owner
-            const userDataComplete = {
-                uuid: userId,
-                tenant_id: tenantId,
-                nome: userData.nome,
-                email: userData.email,
-                telefone: userData.telefone,
-                perfil: 'admin' as UserProfile,
-                perfil_global: 'tenant_admin',
-                is_tenant_owner: true,
-                empresa: tenantData.nome,
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString(),
-                is_active: true,
-            };
-
-            // Salvar no Firebase e local
-            await setDoc(doc(firestore, FirebaseConfig.collections.users, userId), {
-                ...userDataComplete,
-                created_at: serverTimestamp(),
-                updated_at: serverTimestamp(),
-            });
-
-            await this.saveUserToLocal(userDataComplete);
-
-            const token = await firebaseUser.getIdToken();
-
-            const user: User = {
-                ...userDataComplete,
-                id: 0,
-                synced_at: new Date().toISOString(),
-            };
-
-            this.currentUser = user;
-
-            return { user, token };
-        } catch (error) {
-            console.error('Erro ao criar tenant e usuário:', error);
-            throw this.handleAuthError(error);
-        }
-    }
-
-    /**
-     * Entrar em tenant via convite - CORRIGIDO
-     */
-    async joinTenantByInvite(inviteToken: string, userData: any): Promise<{ user: User; token: string }> {
-        try {
-            // ✅ CORRIGIDO: Usar executeSelectQuery
-            const inviteResult = await executeSelectQuery(
-                'SELECT * FROM convites_tenant WHERE token = ? AND status = ?',
-                [inviteToken, 'pendente']
-            );
-
-            if (inviteResult.length === 0) {
-                throw new Error('Convite não encontrado ou expirado');
-            }
-
-            const invite = inviteResult[0]; // ✅ CORRETO: result[0]
-
-            // Verificar se já existe usuário
-            let firebaseUser;
-
-            try {
-                // Tentar fazer login
-                const credential = await signInWithEmailAndPassword(auth, invite.email, userData.password);
-                firebaseUser = credential.user;
-            } catch (error) {
-                // Se não existe, criar novo
-                const credential = await createUserWithEmailAndPassword(auth, invite.email, userData.password);
-                firebaseUser = credential.user;
-            }
-
-            // Criar/atualizar usuário no tenant
-            const userDataComplete = {
-                uuid: firebaseUser.uid,
-                tenant_id: invite.tenant_id,
-                nome: userData.nome,
-                email: invite.email,
-                telefone: userData.telefone,
-                perfil: invite.perfil_tenant as UserProfile,
-                perfil_global: 'user',
-                is_tenant_owner: false,
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString(),
-                is_active: true,
-            };
-
-            await this.saveUserToLocal(userDataComplete);
-
-            // Marcar convite como aceito
-            await executeQuery(
-                'UPDATE convites_tenant SET status = ?, updated_at = ? WHERE uuid = ?',
-                ['aceito', new Date().toISOString(), invite.uuid]
-            );
-
-            const token = await firebaseUser.getIdToken();
-
-            // ✅ CORRIGIDO: Incluir todos os campos obrigatórios
-            const user: User = {
-                id: 0, // Será definido pelo SQLite
-                uuid: firebaseUser.uid,
-                tenant_id: invite.tenant_id,
-                nome: userData.nome,
-                email: invite.email,
-                telefone: userData.telefone,
-                perfil: invite.perfil_tenant,
-                perfil_global: 'user',
-                avatar_url: undefined,
-                empresa: undefined,
-                is_tenant_owner: false,
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString(),
-                synced_at: new Date().toISOString(),
-                is_active: true,
-                last_login_at: undefined,
-                email_verified: false,
-            };
-
-            this.currentUser = user;
-
-            return { user, token };
-        } catch (error) {
-            console.error('Erro ao aceitar convite:', error);
             throw this.handleAuthError(error);
         }
     }
@@ -785,31 +636,6 @@ export class AuthService {
         }
 
         return new Error(message);
-    }
-
-    // ========================================
-    // MÉTODOS DE COMPATIBILIDADE (LEGADOS)
-    // ========================================
-
-    /**
-     * Método legado - compatibilidade
-     */
-    async loginWithTenant(credentials: LoginCredentials): Promise<{ user: User; token: string }> {
-        return this.login(credentials);
-    }
-
-    /**
-     * Método legado - compatibilidade
-     */
-    async registerWithTenant(data: RegisterData): Promise<{ user: User; token: string }> {
-        return this.register(data);
-    }
-
-    /**
-     * Método legado - compatibilidade
-     */
-    async getCurrentUserWithTenant(): Promise<User | null> {
-        return this.getCurrentUser();
     }
 }
 

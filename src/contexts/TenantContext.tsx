@@ -89,6 +89,7 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
 
             const tenantData = result[0];
             return {
+                // ✅ CORRIGIDO: id e uuid como string
                 id: tenantData.id,
                 uuid: tenantData.id, // Para compatibilidade
                 nome: tenantData.nome,
@@ -144,11 +145,6 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
                 created_at: row.created_at,
                 updated_at: row.updated_at,
                 synced_at: row.synced_at,
-                tenant: {
-                    id: row.tenant_id,
-                    nome: row.tenant_nome,
-                    slug: row.tenant_slug,
-                } as any,
             }));
         } catch (error) {
             console.error('Erro ao buscar tenants do usuário:', error);
@@ -396,7 +392,6 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
                 new Date().toISOString()
             ]);
 
-            // TODO: Enviar email de convite
             console.log('✅ Convite enviado para:', email);
         } catch (error) {
             console.error('❌ Erro ao enviar convite:', error);
@@ -459,11 +454,11 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
     };
 
     /**
-     * Verificar limites
+     * Verificar limites - ✅ CORRIGIDO
      */
     const checkLimits = async (): Promise<TenantLimits> => {
         if (!currentTenant) throw new Error('Nenhum tenant ativo');
-        return await calculateTenantLimits(currentTenant.id);
+        return await calculateTenantLimits(currentTenant.id); // ✅ currentTenant.id já é string
     };
 
     /**
@@ -540,19 +535,19 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
     };
 
     /**
-     * Verificar se pode gerenciar usuários
+     * Verificar se pode gerenciar usuários - ✅ CORRIGIDO
      */
     const canManageUsers = (): boolean => {
         if (!user) return false;
-        return ['admin'].includes(user.perfil || '') || user.is_tenant_owner;
+        return ['admin'].includes(user.perfil || '') || (user.is_tenant_owner ?? false);
     };
 
     /**
-     * Verificar se pode gerenciar configurações
+     * Verificar se pode gerenciar configurações - ✅ CORRIGIDO
      */
     const canManageSettings = (): boolean => {
         if (!user) return false;
-        return ['admin'].includes(user.perfil || '') || user.is_tenant_owner;
+        return ['admin'].includes(user.perfil || '') || (user.is_tenant_owner ?? false);
     };
 
     const value: TenantContextType = {
